@@ -84,22 +84,29 @@ interface Outcome {
   score?: number;
   rank?: 'Débutant' | 'Intermédiaire' | 'Expert';
 }
-
 // --- Data ---
 
 const SUPER_CATEGORIES: SuperCategory[] = [
-  { id: 'acad', title: 'Académique', icon: Book },
+  { id: 'acad', title: 'Académie', icon: Book },
   { id: 'tech', title: 'Technologie', icon: Monitor },
-  { id: 'cult', title: 'Culture', icon: Globe },
-  { id: 'ent', title: 'Divertissement', icon: Music },
-  { id: 'sports', title: 'Performance', icon: Trophy },
+  { id: 'cult', title: 'Culture G', icon: Globe },
+  { id: 'ent', title: 'Entertainment', icon: Music },
+  { id: 'sports', title: 'Sports & JO', icon: Trophy },
   { id: 'logic', title: 'Logique & QI', icon: Zap },
-  { id: 'biz', title: 'Business', icon: Wallet },
-  { id: 'life', title: 'Vie Quotidienne', icon: Activity },
-  { id: 'space', title: 'Sciences Avancées', icon: Rocket },
+  { id: 'biz', title: 'Finance & Biz', icon: Wallet },
+  { id: 'life', title: 'Vie & Santé', icon: Activity },
+  { id: 'space', title: 'Espace & Science', icon: Rocket },
   { id: 'lang', title: 'Langues', icon: Languages },
-  { id: 'fun', title: 'Détente', icon: Sparkles },
-  { id: 'rel', title: 'Spiritualité', icon: Sun },
+  { id: 'fun', title: 'Fun & Random', icon: Sparkles },
+  { id: 'rel', title: 'Religions', icon: Sun },
+];
+
+const LEADERBOARD = [
+  { name: "Satoshi_N", score: 980, rank: "Expert" },
+  { name: "Elon_M", score: 920, rank: "Expert" },
+  { name: "Ada_Lov", score: 880, rank: "Intermediate" },
+  { name: "Alan_T", score: 850, rank: "Intermediate" },
+  { name: "Marie_C", score: 810, rank: "Intermediate" },
 ];
 
 const QUIZZES: Quiz[] = [
@@ -113,7 +120,10 @@ const QUIZZES: Quiz[] = [
     timeLimit: 120,
     questions: [
       { id: "m1", text: "Quelle est la racine carrée de 144 ?", options: [{ label: "10", value: "a" }, { label: "12", value: "b", isCorrect: true }, { label: "14", value: "c" }] },
-      { id: "m2", text: "Résoudre 2x + 5 = 15", options: [{ label: "x = 5", value: "a", isCorrect: true }, { label: "x = 10", value: "b" }, { label: "x = 7.5", value: "c" }] }
+      { id: "m2", text: "Résoudre 2x + 5 = 15", options: [{ label: "x = 5", value: "a", isCorrect: true }, { label: "x = 10", value: "b" }, { label: "x = 7.5", value: "c" }] },
+      { id: "m3", text: "Quel est l'aire d'un cercle de rayon 2 ? (π ≈ 3.14)", options: [{ label: "12.56", value: "a", isCorrect: true }, { label: "6.28", value: "b" }, { label: "15.7", value: "c" }] },
+      { id: "m4", text: "Somme des angles d'un triangle ?", options: [{ label: "90°", value: "a" }, { label: "180°", value: "b", isCorrect: true }, { label: "360°", value: "c" }] },
+      { id: "m5", text: "Quelle est la valeur de x dans x² = 9 ?", options: [{ label: "3 ou -3", value: "a", isCorrect: true }, { label: "9", value: "b" }, { label: "1", value: "c" }] }
     ]
   },
   {
@@ -123,7 +133,11 @@ const QUIZZES: Quiz[] = [
     title: "Physique",
     description: "Mécanique classique et thermodynamique.",
     questions: [
-      { id: "p1", text: "Quelle est la vitesse de la lumière (approx) ?", options: [{ label: "300,000 km/s", value: "a", isCorrect: true }, { label: "150,000 km/s", value: "b" }, { label: "1,000,000 km/s", value: "c" }] }
+      { id: "p1", text: "Quelle est la vitesse de la lumière (approx) ?", options: [{ label: "300,000 km/s", value: "a", isCorrect: true }, { label: "150,000 km/s", value: "b" }, { label: "1,000,000 km/s", value: "c" }] },
+      { id: "p2", text: "Loi de Newton : F = ?", options: [{ label: "m * a", value: "a", isCorrect: true }, { label: "m * v", value: "b" }, { label: "m * g²", value: "c" }] },
+      { id: "p3", text: "Unité de mesure de l'énergie ?", options: [{ label: "Pascal", value: "a" }, { label: "Joule", value: "b", isCorrect: true }, { label: "Watt", value: "c" }] },
+      { id: "p4", text: "Qui a découvert la gravité après avoir vu une pomme tomber ?", options: [{ label: "Einstein", value: "a" }, { label: "Newton", value: "b", isCorrect: true }, { label: "Galilée", value: "c" }] },
+      { id: "p5", text: "Quel gaz est nécessaire à la combustion ?", options: [{ label: "Azote", value: "a" }, { label: "Oxygène", value: "b", isCorrect: true }, { label: "CO2", value: "c" }] }
     ]
   },
   {
@@ -133,7 +147,11 @@ const QUIZZES: Quiz[] = [
     title: "Chimie",
     description: "Tableau périodique et réactions moléculaires.",
     questions: [
-      { id: "c1", text: "Symbole chimique de l'Or ?", options: [{ label: "Ag", value: "a" }, { label: "Au", value: "b", isCorrect: true }, { label: "Fe", value: "c" }] }
+      { id: "c1", text: "Symbole chimique de l'Or ?", options: [{ label: "Ag", value: "a" }, { label: "Au", value: "b", isCorrect: true }, { label: "Fe", value: "c" }] },
+      { id: "c2", text: "H2O est la formule de ?", options: [{ label: "L'eau", value: "a", isCorrect: true }, { label: "Le sel", value: "b" }, { label: "L'air", value: "c" }] },
+      { id: "c3", text: "Quel est le pH neutre ?", options: [{ label: "0", value: "a" }, { label: "7", value: "b", isCorrect: true }, { label: "14", value: "c" }] },
+      { id: "c4", text: "Particule chargée négativement dans un atome ?", options: [{ label: "Proton", value: "a" }, { label: "Neutron", value: "b" }, { label: "Électron", value: "c", isCorrect: true }] },
+      { id: "c5", text: "Le diamant est composé de ?", options: [{ label: "Soufre", value: "a" }, { label: "Carbone", value: "b", isCorrect: true }, { label: "Silicon", value: "c" }] }
     ]
   },
   {
@@ -143,7 +161,11 @@ const QUIZZES: Quiz[] = [
     title: "Computer Science",
     description: "Algorithmes, structures de données et logique binaire.",
     questions: [
-      { id: "cs1", text: "Quel est le moteur de recherche le plus utilisé ?", options: [{ label: "Bing", value: "a" }, { label: "Google", value: "b", isCorrect: true }, { label: "DuckDuckGo", value: "c" }] }
+      { id: "cs1", text: "Quel est le moteur de recherche le plus utilisé ?", options: [{ label: "Bing", value: "a" }, { label: "Google", value: "b", isCorrect: true }, { label: "DuckDuckGo", value: "c" }] },
+      { id: "cs2", text: "Nombre de bits dans un octet (byte) ?", options: [{ label: "4", value: "a" }, { label: "8", value: "b", isCorrect: true }, { label: "16", value: "c" }] },
+      { id: "cs3", text: "Structure de données LIFO ?", options: [{ label: "Pile (Stack)", value: "a", isCorrect: true }, { label: "File (Queue)", value: "b" }, { label: "Tableau", value: "c" }] },
+      { id: "cs4", text: "Protocole sécurisé pour le web ?", options: [{ label: "HTTP", value: "a" }, { label: "HTTPS", value: "b", isCorrect: true }, { label: "FTP", value: "c" }] },
+      { id: "cs5", text: "Qui est considéré comme le premier programmeur ?", options: [{ label: "Alan Turing", value: "a" }, { label: "Ada Lovelace", value: "b", isCorrect: true }, { label: "Bill Gates", value: "c" }] }
     ]
   },
   {
@@ -153,7 +175,11 @@ const QUIZZES: Quiz[] = [
     title: "Biologie (SVT)",
     description: "Génétique, écosystèmes et biologie humaine.",
     questions: [
-      { id: "svt1", text: "Où se trouve l'ADN dans une cellule animale ?", options: [{ label: "Noyau", value: "a", isCorrect: true }, { label: "Cytoplasme", value: "b" }, { label: "Membrane", value: "c" }] }
+      { id: "svt1", text: "Où se trouve l'ADN dans une cellule animale ?", options: [{ label: "Noyau", value: "a", isCorrect: true }, { label: "Cytoplasme", value: "b" }, { label: "Membrane", value: "c" }] },
+      { id: "svt2", text: "Combien d'os possède un humain adulte ?", options: [{ label: "150", value: "a" }, { label: "206", value: "b", isCorrect: true }, { label: "300", value: "c" }] },
+      { id: "svt3", text: "Organe pompant le sang ?", options: [{ label: "Poumons", value: "a" }, { label: "Cerveau", value: "b" }, { label: "Cœur", value: "c", isCorrect: true }] },
+      { id: "svt4", text: "Phénomène permettant aux plantes de capter l'énergie solaire ?", options: [{ label: "Respiration", value: "a" }, { label: "Photosynthèse", value: "b", isCorrect: true }, { label: "Transpiration", value: "c" }] },
+      { id: "svt5", text: "Groupe sanguin donneur universel ?", options: [{ label: "A+", value: "a" }, { label: "AB-", value: "b" }, { label: "O-", value: "c", isCorrect: true }] }
     ]
   },
   {
@@ -163,49 +189,39 @@ const QUIZZES: Quiz[] = [
     title: "Histoire",
     description: "Grands empires et révolutions mondiales.",
     questions: [
-      { id: "h1", text: "En quelle année a débuté la Révolution Française ?", options: [{ label: "1789", value: "a", isCorrect: true }, { label: "1776", value: "b" }, { label: "1804", value: "c" }] }
-    ]
-  },
-  {
-    id: "geo",
-    superCategoryId: "acad",
-    type: "knowledge",
-    title: "Géographie",
-    description: "Cartographie, climats et démographie.",
-    questions: [
-      { id: "g1", text: "Quel est le plus grand océan du monde ?", options: [{ label: "Atlantique", value: "a" }, { label: "Pacifique", value: "b", isCorrect: true }, { label: "Indien", value: "c" }] }
-    ]
-  },
-  {
-    id: "phil",
-    superCategoryId: "acad",
-    type: "knowledge",
-    title: "Philosophie",
-    description: "Métaphysique, éthique et grands penseurs.",
-    questions: [
-      { id: "ph1", text: "Qui a dit 'Je pense, donc je suis' ?", options: [{ label: "Platon", value: "a" }, { label: "Descartes", value: "b", isCorrect: true }, { label: "Sartre", value: "c" }] }
+      { id: "h1", text: "En quelle année a débuté la Révolution Française ?", options: [{ label: "1789", value: "a", isCorrect: true }, { label: "1776", value: "b" }, { label: "1804", value: "c" }] },
+      { id: "h2", text: "Qui était le premier président des USA ?", options: [{ label: "Lincoln", value: "a" }, { label: "Washington", value: "b", isCorrect: true }, { label: "Jefferson", value: "c" }] },
+      { id: "h3", text: "Construction de la Muraille de Chine commencée sous quelle dynastie ?", options: [{ label: "Qin", value: "a", isCorrect: true }, { label: "Han", value: "b" }, { label: "Ming", value: "c" }] },
+      { id: "h4", text: "Quel pays a été le premier à atteindre la Lune ?", options: [{ label: "URSS", value: "a" }, { label: "USA", value: "b", isCorrect: true }, { label: "Chine", value: "c" }] },
+      { id: "h5", text: "Date de la chute du mur de Berlin ?", options: [{ label: "1985", value: "a" }, { label: "1989", value: "b", isCorrect: true }, { label: "1991", value: "c" }] }
     ]
   },
 
   // --- Technologie ---
   {
-    id: "prog",
+    id: "prog_lang",
     superCategoryId: "tech",
     type: "knowledge",
-    title: "Programmation",
-    description: "Algorithmie et langages de haut niveau.",
+    title: "Langages de Code",
+    description: "C, Python, JavaScript et plus.",
     questions: [
-      { id: "pr1", text: "Que signifie 'API' ?", options: [{ label: "Application Programming Interface", value: "a", isCorrect: true }, { label: "Advanced Protocol Integration", value: "b" }] }
+      { id: "pl1", text: "Lequel est un langage compilé ?", options: [{ label: "Python", value: "a" }, { label: "C", value: "b", isCorrect: true }, { label: "PHP", value: "c" }] },
+      { id: "pl2", text: "Symbole pour les commentaires sur une ligne en JS ?", options: [{ label: "//", value: "a", isCorrect: true }, { label: "#", value: "b" }, { label: "<!--", value: "c" }] },
+      { id: "pl3", text: "Lequel est orienté objet ?", options: [{ label: "Java", value: "a", isCorrect: true }, { label: "C", value: "b" }, { label: "Assembly", value: "c" }] },
+      { id: "pl4", text: "Mot-clé pour définir une fonction en Python ?", options: [{ label: "func", value: "a" }, { label: "def", value: "b", isCorrect: true }, { label: "function", value: "c" }] },
+      { id: "pl5", text: "Framework JS créé par Facebook ?", options: [{ label: "Angular", value: "a" }, { label: "React", value: "b", isCorrect: true }, { label: "Vue", value: "c" }] }
     ]
   },
   {
-    id: "ai",
+    id: "cyber",
     superCategoryId: "tech",
     type: "knowledge",
-    title: "I.A. & Futurisme",
-    description: "Intelligence Artificielle et Machine Learning.",
+    title: "Cybersécurité",
+    description: "Protection des données et menaces réseau.",
     questions: [
-      { id: "ai1", text: "Que signifie 'LLM' ?", options: [{ label: "Large Language Model", value: "a", isCorrect: true }, { label: "Low Logical Machine", value: "b" }] }
+      { id: "cy1", text: "Que signifie 'VPN' ?", options: [{ label: "Virtual Private Network", value: "a", isCorrect: true }, { label: "Variable Port Node", value: "b" }] },
+      { id: "cy2", text: "Type d'attaque saturant un serveur ?", options: [{ label: "Phishing", value: "a" }, { label: "DDoS", value: "b", isCorrect: true }, { label: "Malware", value: "c" }] },
+      { id: "cy3", text: "Hacker 'éthique' ?", options: [{ label: "Black Hat", value: "a" }, { label: "White Hat", value: "b", isCorrect: true }, { label: "Grey Hat", value: "c" }] }
     ]
   },
 
@@ -214,98 +230,222 @@ const QUIZZES: Quiz[] = [
     id: "capitals",
     superCategoryId: "cult",
     type: "knowledge",
-    title: "Capitales du Monde",
-    description: "Testez votre connaissance géographique globale.",
+    title: "Capitales & Monuments",
+    description: "Monuments célèbres et capitales mondiales.",
     questions: [
-      { id: "cap1", text: "Capitale du Japon ?", options: [{ label: "Kyoto", value: "a" }, { label: "Tokyo", value: "b", isCorrect: true }, { label: "Osaka", value: "c" }] }
+      { id: "cap1", text: "Capitale du Japon ?", options: [{ label: "Kyoto", value: "a" }, { label: "Tokyo", value: "b", isCorrect: true }, { label: "Osaka", value: "c" }] },
+      { id: "cap2", text: "Où se trouve le Colisée ?", options: [{ label: "Athènes", value: "a" }, { label: "Rome", value: "b", isCorrect: true }, { label: "Paris", value: "c" }] },
+      { id: "cap3", text: "Capitale de la France ?", options: [{ label: "Lyon", value: "a" }, { label: "Marseille", value: "b" }, { label: "Paris", value: "c", isCorrect: true }] },
+      { id: "cap4", text: "Qui a construit les pyramides de Gizeh ?", options: [{ label: "Romains", value: "a" }, { label: "Égyptiens", value: "b", isCorrect: true }, { label: "Grecs", value: "c" }] },
+      { id: "cap5", text: "Où est la Statue de la Liberté ?", options: [{ label: "Washington", value: "a" }, { label: "New York", value: "b", isCorrect: true }, { label: "Boston", value: "c" }] }
     ]
   },
 
   // --- Divertissement ---
   {
-    id: "anime",
+    id: "movies_tv",
     superCategoryId: "ent",
     type: "knowledge",
-    title: "Anime & Manga",
-    description: "Culture Otaku et classiques de l'animation Japonaise.",
+    title: "Cinéma & Séries",
+    description: "Films cultes, séries TV et célébrités.",
     questions: [
-      { id: "ani1", text: "Qui est le protagoniste de 'One Piece' ?", options: [{ label: "Zoro", value: "a" }, { label: "Luffy", value: "b", isCorrect: true }, { label: "Sanji", value: "c" }] }
+      { id: "mov1", text: "Qui joue Iron Man au cinéma ?", options: [{ label: "Chris Evans", value: "a" }, { label: "Robert Downey Jr", value: "b", isCorrect: true }, { label: "Tom Holland", value: "c" }] },
+      { id: "mov2", text: "Série avec des dragons et un trône de fer ?", options: [{ label: "The Witcher", value: "a" }, { label: "Game of Thrones", value: "b", isCorrect: true }, { label: "Vikings", value: "c" }] },
+      { id: "mov3", text: "Réalisateur de 'Inception' ?", options: [{ label: "Spielberg", value: "a" }, { label: "Nolan", value: "b", isCorrect: true }, { label: "Scorsese", value: "c" }] },
+      { id: "mov4", text: "Quel film a gagné l'Oscar du meilleur film en 2020 ?", options: [{ label: "Joker", value: "a" }, { label: "Parasite", value: "b", isCorrect: true }, { label: "1917", value: "c" }] },
+      { id: "mov5", text: "Série se déroulant dans une banque d'Espagne ?", options: [{ label: "Elite", value: "a" }, { label: "La Casa de Papel", value: "b", isCorrect: true }, { label: "Narcos", value: "c" }] }
     ]
   },
 
   // --- Performance (Sports) ---
   {
-    id: "football",
+    id: "sports_mix",
     superCategoryId: "sports",
     type: "knowledge",
-    title: "Football Mondial",
-    description: "Légendes et compétitions internationales.",
+    title: "Omnisports",
+    description: "Basket, Tennis, JO et Coupe du Monde.",
     questions: [
-      { id: "f1", text: "Combien de Ballons d'Or possède Lionel Messi ?", options: [{ label: "5", value: "a" }, { label: "8", value: "b", isCorrect: true }, { label: "7", value: "c" }] }
+      { id: "sm1", text: "Joueur de basket avec le plus de bagues NBA ?", options: [{ label: "Jordan", value: "a" }, { label: "Bill Russell", value: "b", isCorrect: true }, { label: "LeBron", value: "c" }] },
+      { id: "sm2", text: "Record de victoires à Roland Garros ?", options: [{ label: "Federer", value: "a" }, { label: "Nadal", value: "b", isCorrect: true }, { label: "Djokovic", value: "c" }] },
+      { id: "sm3", text: "Fréquence des Jeux Olympiques d'été ?", options: [{ label: "2 ans", value: "a" }, { label: "4 ans", value: "b", isCorrect: true }, { label: "5 ans", value: "c" }] },
+      { id: "sm4", text: "Vainqueur CDM Football 1998 ?", options: [{ label: "Brésil", value: "a" }, { label: "France", value: "b", isCorrect: true }, { label: "Italie", value: "c" }] },
+      { id: "sm5", text: "Sport de Usain Bolt ?", options: [{ label: "Natation", value: "a" }, { label: "Saut en hauteur", value: "b" }, { label: "Sprint (Athlétisme)", value: "c", isCorrect: true }] }
     ]
   },
 
   // --- Business & Finance ---
   {
-    id: "crypto",
+    id: "finance_basics",
     superCategoryId: "biz",
     type: "knowledge",
-    title: "Crypto & Blockchain",
-    description: "Bitcoin, Ethereum et Web3.",
+    title: "Finance & Entreprenariat",
+    description: "Économie, Marketing et Trading.",
     questions: [
-      { id: "cr1", text: "Qu'est-ce qu'un NFT ?", options: [{ label: "Non-Fungible Token", value: "a", isCorrect: true }, { label: "New Finance Tech", value: "b" }] }
+      { id: "fb1", text: "Que signifie 'ROI' en marketing ?", options: [{ label: "Return on Investment", value: "a", isCorrect: true }, { label: "Risk of Inflation", value: "b" }] },
+      { id: "fb2", text: "L'offre et la ... ?", options: [{ label: "Vente", value: "a" }, { label: "Demande", value: "b", isCorrect: true }, { label: "Cote", value: "c" }] },
+      { id: "fb3", text: "Plus grande capitalisation boursière crypto ?", options: [{ label: "Ethereum", value: "a" }, { label: "Bitcoin", value: "b", isCorrect: true }, { label: "Solana", value: "c" }] }
     ]
   },
 
   // --- Logique & QI ---
   {
-    id: "riddles",
+    id: "iq_logic",
     superCategoryId: "logic",
     type: "knowledge",
-    title: "Énigmes Logiques",
-    description: "Défiez votre cerveau avec des puzzles complexes.",
+    title: "Tests de Logique",
+    description: "Suites logiques et casse-têtes.",
     questions: [
-      { id: "lo1", text: "Qu'est-ce qui a des clés mais ne peut pas ouvrir de serrures ?", options: [{ label: "Un piano", value: "a", isCorrect: true }, { label: "Un livre", value: "b" }, { label: "Un coffre", value: "c" }] }
+      { id: "iq1", text: "2, 4, 8, 16, ... ?", options: [{ label: "24", value: "a" }, { label: "32", value: "b", isCorrect: true }, { label: "64", value: "c" }] },
+      { id: "iq2", text: "Pain est à boulanger ce que viande est à ... ?", options: [{ label: "Cuisinier", value: "a" }, { label: "Boucher", value: "b", isCorrect: true }, { label: "Fermier", value: "c" }] },
+      { id: "iq3", text: "Si tous les A sont B, et certains B sont C, alors tous les A sont C ?", options: [{ label: "Vrai", value: "a" }, { label: "Faux", value: "b", isCorrect: true }] }
     ]
   },
 
-  // --- Sciences Avancées ---
+  // --- Vie Quotidienne ---
   {
-    id: "astro",
-    superCategoryId: "space",
+    id: "health_nutrition",
+    superCategoryId: "life",
     type: "knowledge",
-    title: "Astronomie",
-    description: "Exploration spatiale et cosmologie.",
+    title: "Santé & Nutrition",
+    description: "Bien-être, fitness et alimentation.",
     questions: [
-      { id: "sp1", text: "Quelle planète est surnommée la planète rouge ?", options: [{ label: "Vénus", value: "a" }, { label: "Mars", value: "b", isCorrect: true }, { label: "Saturne", value: "c" }] }
+      { id: "hn1", text: "Vitamine produite par le soleil ?", options: [{ label: "A", value: "a" }, { label: "C", value: "b" }, { label: "D", value: "c", isCorrect: true }] },
+      { id: "hn2", text: "Combien de verres d'eau recommandés par jour (moyenne) ?", options: [{ label: "4", value: "a" }, { label: "8", value: "b", isCorrect: true }, { label: "15", value: "c" }] },
+      { id: "hn3", text: "Lequel est un sucre lent ?", options: [{ label: "Miel", value: "a" }, { label: "Riz complet", value: "b", isCorrect: true }, { label: "Bonbon", value: "c" }] }
+    ]
+  },
+
+  // --- Détente ---
+  {
+    id: "would_rather",
+    superCategoryId: "fun",
+    type: "simulation",
+    title: "Tu préfères... ?",
+    description: "Le jeu des choix impossibles.",
+    questions: [
+      {
+        id: "wr1",
+        text: "Préfères-tu voler comme un oiseau ou respirer sous l'eau ?",
+        options: [
+          { label: "Voler", value: "fly", weights: { aggressive: 20, prudent: 0, social: 10, growth: 10 } },
+          { label: "Respirer sous l'eau", value: "swim", weights: { aggressive: 10, prudent: 10, social: 0, growth: 20 } },
+        ]
+      }
     ]
   },
 
   // --- Langues ---
   {
-    id: "english",
+    id: "languages_mix",
     superCategoryId: "lang",
     type: "knowledge",
-    title: "English Mastery",
-    description: "Grammar, vocabulary and idioms.",
+    title: "Polyglotte Express",
+    description: "Français, Anglais, Arabe.",
     questions: [
-      { id: "en1", text: "Select the correct plural: 'Child'", options: [{ label: "Childs", value: "a" }, { label: "Children", value: "b", isCorrect: true }] }
+      { id: "lg1", text: "Comment dit-on 'Merci' en Arabe ?", options: [{ label: "Shukran", value: "a", isCorrect: true }, { label: "Marhaba", value: "b" }] },
+      { id: "lg2", text: "Traduction de 'Bread' ?", options: [{ label: "Beurre", value: "a" }, { label: "Pain", value: "b", isCorrect: true }] }
     ]
   },
 
   // --- Spiritualité ---
   {
-    id: "islam",
+    id: "religious_culture",
     superCategoryId: "rel",
     type: "knowledge",
-    title: "Culture Islamique",
-    description: "Histoire et fondements de la spiritualité.",
+    title: "Cultures Religieuses",
+    description: "Histoire et sagesses du monde.",
     questions: [
-      { id: "is1", text: "Combien y a-t-il de piliers en Islam ?", options: [{ label: "3", value: "a" }, { label: "5", value: "b", isCorrect: true }, { label: "7", value: "c" }] }
+      { id: "rc1", text: "Mois de jeûne en Islam ?", options: [{ label: "Ramadan", value: "a", isCorrect: true }, { label: "Muharram", value: "b" }] },
+      { id: "rc2", text: "Combien de commandements (Moïse) ?", options: [{ label: "5", value: "a" }, { label: "10", value: "b", isCorrect: true }] }
+    ]
+  },
+  // --- Langues ---
+  {
+    id: "grammar_fr",
+    superCategoryId: "lang",
+    type: "knowledge",
+    title: "Grammaire Française",
+    description: "Conjugaison et syntaxe.",
+    questions: [
+      { id: "gfr1", text: "Auxiliaire pour 'Mourir' au passé composé ?", options: [{ label: "Avoir", value: "a" }, { label: "Être", value: "b", isCorrect: true }] }
     ]
   },
 
-  // --- Vie Quotidienne (Simulation) ---
+  // --- Fun / Random ---
+  {
+    id: "char_sim",
+    superCategoryId: "fun",
+    type: "simulation",
+    title: "Quel Héros es-tu ?",
+    description: "Découvre ton archétype légendaire.",
+    questions: [
+      {
+        id: "c1",
+        text: "Face au danger, tu préfères...",
+        options: [
+          { label: "L'approche frontale", value: "war", weights: { aggressive: 20, prudent: 0, social: 0, growth: 10 } },
+          { label: "La ruse et l'ombre", value: "rog", weights: { aggressive: 10, prudent: 20, social: 0, growth: 0 } },
+        ]
+      }
+    ]
+  },
+  {
+    id: "trick_q",
+    superCategoryId: "fun",
+    type: "knowledge",
+    title: "Questions Pièges",
+    description: "Ne te fais pas avoir !",
+    questions: [
+      { id: "tq1", text: "Si un avion s'écrase à la frontière entre les USA et le Canada, où enterre-t-on les survivants ?", options: [{ label: "USA", value: "a" }, { label: "Canada", value: "b" }, { label: "On n'enterre pas les survivants", value: "c", isCorrect: true }] }
+    ]
+  },
+
+  // --- Technologie Additionnelle ---
+  {
+    id: "hardware",
+    superCategoryId: "tech",
+    type: "knowledge",
+    title: "Hardware PC",
+    description: "Composants et architecture physique.",
+    questions: [
+      { id: "hw1", text: "Cerveau de l'ordinateur ?", options: [{ label: "GPU", value: "a" }, { label: "CPU", value: "b", isCorrect: true }, { label: "RAM", value: "c" }] }
+    ]
+  },
+  {
+    id: "networks",
+    superCategoryId: "tech",
+    type: "knowledge",
+    title: "Réseaux & Web",
+    description: "Protocoles et infrastructure internet.",
+    questions: [
+      { id: "nw1", text: "Adresse unique d'un appareil sur un réseau ?", options: [{ label: "IP", value: "a", isCorrect: true }, { label: "URL", value: "b" }] }
+    ]
+  },
+
+  // --- Sports ---
+  {
+    id: "olympics",
+    superCategoryId: "sports",
+    type: "knowledge",
+    title: "Histoire des J.O.",
+    description: "Des cités grecques aux temps modernes.",
+    questions: [
+      { id: "ol1", text: "Couleur absente des anneaux olympiques ?", options: [{ label: "Bleu", value: "a" }, { label: "Rose", value: "b", isCorrect: true }, { label: "Noir", value: "c" }] }
+    ]
+  },
+
+  // --- Culture G Additionnelle ---
+  {
+    id: "flags",
+    superCategoryId: "cult",
+    type: "knowledge",
+    title: "Drapeaux du Monde",
+    description: "Vexillologie pour experts.",
+    questions: [
+      { id: "fl1", text: "Drapeau pur Libyen (1977-2011) ?", options: [{ label: "Vert", value: "a", isCorrect: true }, { label: "Rouge", value: "b" }] }
+    ]
+  },
+  
   {
     id: "productivity",
     superCategoryId: "life",
@@ -328,16 +468,17 @@ const QUIZZES: Quiz[] = [
 
 // --- Components ---
 
-const Navbar = ({ isAuthenticated, onSignOut }: { isAuthenticated: boolean, onSignOut: () => void }) => (
+const Navbar = ({ isAuthenticated, onSignOut, setView }: { isAuthenticated: boolean, onSignOut: () => void, setView: (v: any) => void }) => (
   <nav className="fixed top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center bg-luxury-black/50 backdrop-blur-md border-b border-white/5">
     <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
       <div className="w-8 h-8 rounded bg-gold flex items-center justify-center text-black font-bold">A</div>
       <span className="text-xl font-serif tracking-widest uppercase group-hover:text-gold transition-colors">Axiom</span>
     </div>
     <div className="hidden md:flex gap-8 text-xs uppercase tracking-[0.2em] font-medium text-white/60">
-      <a href="#intelligence" className="hover:text-gold transition-colors">Intelligence</a>
-      <a href="#ecosystem" className="hover:text-gold transition-colors">Écosystème</a>
-      <a href="#about" className="hover:text-gold transition-colors">À Propos</a>
+      <button onClick={() => setView('grid')} className="hover:text-gold transition-colors">Intelligence</button>
+      <button onClick={() => setView('intel')} className="hover:text-gold transition-colors">Flux Stratégique</button>
+      <button onClick={() => setView('leaderboard')} className="hover:text-gold transition-colors">Classement</button>
+      <button onClick={() => setView('history')} className="hover:text-gold transition-colors">Historique</button>
     </div>
     <div className="flex items-center gap-4">
       {isAuthenticated ? (
@@ -356,13 +497,12 @@ const Navbar = ({ isAuthenticated, onSignOut }: { isAuthenticated: boolean, onSi
   </nav>
 );
 
-const DecisionEngine = () => {
+const DecisionEngine = ({ view, setView }: { view: string, setView: (v: any) => void }) => {
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState<Option[]>([]);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [view, setView] = useState<'grid' | 'quiz' | 'result' | 'history'>('grid');
   const [selectedSuperCat, setSelectedSuperCat] = useState<string>('acad');
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [history, setHistory] = useState<{date: string, scenario: string, result: string, resultId: string}[]>(() => {
@@ -504,8 +644,14 @@ const DecisionEngine = () => {
         <h2 className="text-5xl md:text-7xl mb-8 font-serif leading-tight">Portail de Connaissance</h2>
         
         <div className="flex gap-4 justify-center flex-wrap mb-10">
-           <button onClick={() => setView('grid')} className={`text-[10px] uppercase tracking-widest px-6 py-2 rounded-full transition-all flex items-center gap-2 ${view !== 'history' ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40 hover:text-white'}`}>
+           <button onClick={() => setView('grid')} className={`text-[10px] uppercase tracking-widest px-6 py-2 rounded-full transition-all flex items-center gap-2 ${view === 'grid' ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40 hover:text-white'}`}>
              <Zap size={10} /> Quêtes Actives
+           </button>
+           <button onClick={() => setView('intel')} className={`text-[10px] uppercase tracking-widest px-6 py-2 rounded-full transition-all flex items-center gap-2 ${view === 'intel' ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40 hover:text-white'}`}>
+             <Globe size={10} /> Flux Stratégique
+           </button>
+           <button onClick={() => setView('leaderboard')} className={`text-[10px] uppercase tracking-widest px-6 py-2 rounded-full transition-all flex items-center gap-2 ${view === 'leaderboard' ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40 hover:text-white'}`}>
+             <Trophy size={10} /> Classement
            </button>
            <button onClick={() => setView('history')} className={`text-[10px] uppercase tracking-widest px-6 py-2 rounded-full transition-all flex items-center gap-2 ${view === 'history' ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40 hover:text-white'}`}>
              <BarChart3 size={10} /> Historique
@@ -579,6 +725,10 @@ const DecisionEngine = () => {
               exit={{ opacity: 0 }}
               className="space-y-6 max-w-4xl mx-auto w-full"
             >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-3xl font-serif italic text-gold">Archives de Performance</h3>
+                <button onClick={() => { setHistory([]); localStorage.removeItem('axiom_history'); }} className="text-[10px] text-red-400 uppercase tracking-widest hover:text-red-300">Réinitialiser</button>
+              </div>
               {history.length > 0 ? history.map((h, i) => (
                 <div key={i} className="flex justify-between items-center p-8 rounded-[2rem] border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
                   <div className="flex items-center gap-6">
@@ -600,6 +750,161 @@ const DecisionEngine = () => {
                   <p className="text-white/20 italic">Aucune donnée neuro-numérique n'a été indexée.</p>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {view === 'intel' && (
+            <motion.div 
+              key="intel"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-6xl mx-auto w-full"
+            >
+              <div className="grid lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-1 space-y-6">
+                  <div className="p-8 rounded-[2rem] border border-white/5 bg-white/[0.02] backdrop-blur-xl">
+                    <h4 className="text-[10px] uppercase text-gold tracking-[0.3em] font-bold mb-6">Index de Sentiment</h4>
+                    <div className="space-y-4">
+                      {[
+                        { label: "Confiance Marché", val: 78, color: "bg-green-500" },
+                        { label: "Risque Géopolitique", val: 42, color: "bg-red-500" },
+                        { label: "Vélocité Tech", val: 91, color: "bg-blue-500" }
+                      ].map((item, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-[9px] uppercase tracking-widest text-white/40 mb-2">
+                            <span>{item.label}</span>
+                            <span>{item.val}%</span>
+                          </div>
+                          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.val}%` }}
+                              className={`h-full ${item.color}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-8 rounded-[2rem] border border-white/5 bg-gold/[0.02]">
+                    <h4 className="text-[10px] uppercase text-gold tracking-[0.3em] font-bold mb-4">Focus Stratégique</h4>
+                    <p className="text-white/40 text-xs leading-relaxed italic">
+                      "L'accélération de l'IA générative dans les infrastructures critiques redéfinit les barrières à l'entrée du marché."
+                    </p>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-3 space-y-8">
+                  <div className="flex justify-between items-end mb-4">
+                    <h3 className="text-4xl font-serif italic text-gold">Flux d'Intelligence <span className="text-white opacity-20">Personnalisé</span></h3>
+                    <div className="text-[10px] uppercase tracking-widest text-white/20 flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Mise à jour en continu
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {[
+                      { 
+                        category: "Finance", 
+                        title: "Pivot des Banques Centrales : Analyse de l'Impact sur la Dette Souveraine", 
+                        summary: "Les nouvelles projections suggèrent un assouplissement plus lent que prévu, forçant les entreprises à restructurer leurs plans d'investissement à long terme.",
+                        impact: "Élevé",
+                        time: "Il y a 12 min"
+                      },
+                      { 
+                        category: "Technologie", 
+                        title: "L'Aube de l'Informatique Quantique Commerciale", 
+                        summary: "Trois nouveaux laboratoires annoncent une stabilité de qubit record, ouvrant la voie à une cryptographie post-quantique indispensable dès 2027.",
+                        impact: "Critique",
+                        time: "Il y a 45 min"
+                      },
+                      { 
+                        category: "Énergie", 
+                        title: "Fusion Nucléaire : Nouvelle Percée au National Ignition Facility", 
+                        summary: "Un gain d'énergie net constant a été maintenu pendant 120 secondes, raccourcissant l'horizon des énergies propres illimitées.",
+                        impact: "Transformateur",
+                        time: "Il y a 2h"
+                      },
+                      { 
+                        category: "Logistique", 
+                        title: "Routes Maritimes de l'Arctique : Ouverture d'une Nouvelle Voie Commerciale", 
+                        summary: "La fonte des glaces record permet une réduction de 40% du temps de transit entre l'Asie et l'Europe pour la première fois cette saison.",
+                        impact: "Moyen",
+                        time: "Il y a 4h"
+                      }
+                    ].map((news, idx) => (
+                      <motion.div 
+                        key={idx}
+                        whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.04)" }}
+                        className="p-8 rounded-[2rem] border border-white/5 bg-white/[0.01] transition-all cursor-pointer group"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <span className="px-3 py-1 rounded-full border border-gold/20 text-gold text-[9px] uppercase tracking-widest font-bold">
+                            {news.category}
+                          </span>
+                          <span className="text-[9px] uppercase text-white/20 tracking-widest">{news.time}</span>
+                        </div>
+                        <h4 className="text-2xl font-serif mb-3 group-hover:text-gold transition-colors">{news.title}</h4>
+                        <p className="text-white/40 text-sm leading-relaxed mb-6">{news.summary}</p>
+                        <div className="flex items-center gap-4 border-t border-white/5 pt-4">
+                           <div className="flex items-center gap-2">
+                             <span className="text-[9px] uppercase tracking-widest text-white/20">Impact :</span>
+                             <span className={`text-[10px] font-bold uppercase ${news.impact === 'Critique' || news.impact === 'Transformateur' ? 'text-red-400' : 'text-gold'}`}>{news.impact}</span>
+                           </div>
+                           <ArrowRight size={14} className="ml-auto text-white/10 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {view === 'leaderboard' && (
+            <motion.div 
+              key="leaderboard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto w-full"
+            >
+              <div className="text-center mb-16">
+                <h3 className="text-4xl font-serif italic text-gold mb-4">Elite Network</h3>
+                <p className="text-white/40 text-xs uppercase tracking-widest">Les esprits les plus vifs de la plateforme</p>
+              </div>
+              
+              <div className="gold-border rounded-[2.5rem] overflow-hidden bg-white/[0.02]">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/5">
+                      <th className="px-10 py-6 text-xs uppercase tracking-widest text-gold font-bold">Rang</th>
+                      <th className="px-10 py-6 text-xs uppercase tracking-widest text-gold font-bold">Profil</th>
+                      <th className="px-10 py-6 text-xs uppercase tracking-widest text-gold font-bold text-right">Performance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {LEADERBOARD.map((user, idx) => (
+                      <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors group">
+                        <td className="px-10 py-8">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-sm ${idx === 0 ? 'bg-gold text-black font-bold' : 'border border-white/10 text-white/40'}`}>
+                            {idx + 1}
+                          </div>
+                        </td>
+                        <td className="px-10 py-8">
+                          <div className="font-serif text-xl group-hover:text-gold transition-colors">{user.name}</div>
+                          <div className="text-[10px] text-white/30 uppercase tracking-widest font-bold">{user.rank}</div>
+                        </td>
+                        <td className="px-10 py-8 text-right font-mono text-gold text-2xl font-light">
+                          {user.score} <span className="text-[10px] text-white/20 ml-1">PTS</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </motion.div>
           )}
 
@@ -950,6 +1255,7 @@ const AuthPortal = ({ onAuthenticate }: { onAuthenticate: () => void }) => {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [view, setView] = useState<'grid' | 'quiz' | 'result' | 'history' | 'leaderboard' | 'intel'>('grid');
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef });
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -963,7 +1269,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <Navbar isAuthenticated={isAuthenticated} onSignOut={() => setIsAuthenticated(false)} />
+      <Navbar isAuthenticated={isAuthenticated} onSignOut={() => setIsAuthenticated(false)} setView={setView} />
 
       <motion.div
         animate={isAuthenticated ? { opacity: 1 } : { opacity: 0 }}
@@ -985,9 +1291,16 @@ export default function App() {
               Intelligence de <br className="hidden md:block" /> <span className="italic">Décision</span> Axiom.
             </h1>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-              <a href="#intelligence" className="px-10 py-5 rounded-full bg-gold text-black font-semibold text-sm uppercase tracking-widest hover:bg-white transition-all flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  const el = document.getElementById('intelligence');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                  setView('grid');
+                }}
+                className="px-10 py-5 rounded-full bg-gold text-black font-semibold text-sm uppercase tracking-widest hover:bg-white transition-all flex items-center gap-3 text-left"
+              >
                 Lancer le Cycle d'Intelligence <CircleArrowRight size={18} />
-              </a>
+              </button>
               <button className="px-10 py-5 rounded-full gold-border text-white/80 text-sm uppercase tracking-widest hover:text-white hover:bg-white/5 transition-all">
                 Explorer l'Écosystème
               </button>
@@ -995,6 +1308,7 @@ export default function App() {
           </motion.div>
         </motion.div>
 
+        {/* Hero Background Elements */}
         {/* Hero Background Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gold/5 blur-[160px] rounded-full"></div>
@@ -1017,7 +1331,7 @@ export default function App() {
       </section>
 
       {/* Decision Engine App */}
-      <DecisionEngine />
+      <DecisionEngine view={view} setView={setView} />
 
       {/* Feature Section */}
       <FeatureSection />
