@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
 import { 
   ChevronRight, 
@@ -60,55 +60,55 @@ interface Outcome {
 const SCENARIOS: Scenario[] = [
   {
     id: "career",
-    title: "Strategic Evolution",
-    description: "Should you pursue the high-risk executive pivot or consolidate your current leadership position?",
+    title: "Évolution Stratégique",
+    description: "Devriez-vous poursuivre un pivot exécutif à haut risque ou consolider votre position de leadership actuelle ?",
     questions: [
       {
         id: "hours",
-        text: "What is your current cognitive bandwidth?",
+        text: "Quelle est votre bande passante cognitive actuelle ?",
         options: [
-          { label: "Surplus (12+ hours daily)", value: "high", weights: { aggressive: 10, prudent: -5, social: -2, growth: 8 } },
-          { label: "Optimized (8 hours deeply)", value: "med", weights: { aggressive: 5, prudent: 5, social: 5, growth: 5 } },
-          { label: "Critical (Restricted focus)", value: "low", weights: { aggressive: -10, prudent: 10, social: 2, growth: -5 } },
+          { label: "Surplus (12+ heures/jour)", value: "high", weights: { aggressive: 10, prudent: -5, social: -2, growth: 8 } },
+          { label: "Optimisé (8 heures intenses)", value: "med", weights: { aggressive: 5, prudent: 5, social: 5, growth: 5 } },
+          { label: "Critique (Focus restreint)", value: "low", weights: { aggressive: -10, prudent: 10, social: 2, growth: -5 } },
         ]
       },
       {
         id: "horizon",
-        text: "What is your primary success horizon?",
+        text: "Quel est votre horizon de réussite prioritaire ?",
         options: [
-          { label: "Instant dominance (Next 6 months)", value: "short", weights: { aggressive: 15, prudent: -10, social: 5, growth: 2 } },
-          { label: "Generational legacy (5+ years)", value: "long", weights: { aggressive: 2, prudent: 15, social: 8, growth: 15 } },
+          { label: "Dominance instantanée (6 prochains mois)", value: "short", weights: { aggressive: 15, prudent: -10, social: 5, growth: 2 } },
+          { label: "Légat générationnel (5+ ans)", value: "long", weights: { aggressive: 2, prudent: 15, social: 8, growth: 15 } },
         ]
       },
       {
         id: "financial",
-        text: "Capital liquidity status?",
+        text: "État de la liquidité du capital ?",
         options: [
-          { label: "Aggressive reserve", value: "high", weights: { aggressive: 10, prudent: -2, social: 5, growth: 10 } },
-          { label: "Structured stability", value: "med", weights: { aggressive: 2, prudent: 10, social: 5, growth: 5 } },
+          { label: "Réserve agressive", value: "high", weights: { aggressive: 10, prudent: -2, social: 5, growth: 10 } },
+          { label: "Stabilité structurée", value: "med", weights: { aggressive: 2, prudent: 10, social: 5, growth: 5 } },
         ]
       }
     ]
   },
   {
     id: "daily",
-    title: "Performance Equilibrium",
-    description: "Should you prioritize intensive study/work or engage in restorative recreation?",
+    title: "Équilibre de Performance",
+    description: "Devriez-vous privilégier l'étude/le travail intensif ou vous engager dans une récréation restauratrice ?",
     questions: [
       {
         id: "urgency",
-        text: "How imminent is the 'Proof of Performance' (Exam/Deadline)?",
+        text: "À quel point la « Preuve de Performance » (Examen/Date limite) est-elle imminente ?",
         options: [
-          { label: "Immediate (< 24 hours)", value: "critical", weights: { aggressive: 20, prudent: -10, social: -10, growth: 15 } },
-          { label: "Strategic (72+ hours)", value: "relaxed", weights: { aggressive: 5, prudent: 15, social: 10, growth: 10 } },
+          { label: "Immédiate (< 24 heures)", value: "critical", weights: { aggressive: 20, prudent: -10, social: -10, growth: 15 } },
+          { label: "Stratégique (72+ heures)", value: "relaxed", weights: { aggressive: 5, prudent: 15, social: 10, growth: 10 } },
         ]
       },
       {
         id: "energy",
-        text: "Neuro-chemical state (Energy level)?",
+        text: "État neuro-chimique (Niveau d'énergie) ?",
         options: [
-          { label: "Peak (Focused/Flow)", value: "high", weights: { aggressive: 15, prudent: 5, social: -5, growth: 20 } },
-          { label: "Diminished (Tired/Anxious)", value: "low", weights: { aggressive: -15, prudent: 20, social: 15, growth: -10 } },
+          { label: "Pic (Concentré/Flow)", value: "high", weights: { aggressive: 15, prudent: 5, social: -5, growth: 20 } },
+          { label: "Diminué (Fatigué/Anxieux)", value: "low", weights: { aggressive: -15, prudent: 20, social: 15, growth: -10 } },
         ]
       }
     ]
@@ -117,20 +117,31 @@ const SCENARIOS: Scenario[] = [
 
 // --- Components ---
 
-const Navbar = () => (
+const Navbar = ({ isAuthenticated, onSignOut }: { isAuthenticated: boolean, onSignOut: () => void }) => (
   <nav className="fixed top-0 left-0 w-full z-50 px-6 py-4 flex justify-between items-center bg-luxury-black/50 backdrop-blur-md border-b border-white/5">
-    <div className="flex items-center gap-2 group cursor-pointer">
+    <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
       <div className="w-8 h-8 rounded bg-gold flex items-center justify-center text-black font-bold">A</div>
       <span className="text-xl font-serif tracking-widest uppercase group-hover:text-gold transition-colors">Axiom</span>
     </div>
     <div className="hidden md:flex gap-8 text-xs uppercase tracking-[0.2em] font-medium text-white/60">
       <a href="#intelligence" className="hover:text-gold transition-colors">Intelligence</a>
-      <a href="#ecosystem" className="hover:text-gold transition-colors">Ecosystem</a>
-      <a href="#about" className="hover:text-gold transition-colors">About</a>
+      <a href="#ecosystem" className="hover:text-gold transition-colors">Écosystème</a>
+      <a href="#about" className="hover:text-gold transition-colors">À Propos</a>
     </div>
-    <button className="gold-border px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold hover:bg-gold hover:text-black transition-all">
-      Deploy Axiom
-    </button>
+    <div className="flex items-center gap-4">
+      {isAuthenticated ? (
+        <button 
+          onClick={onSignOut}
+          className="text-[10px] uppercase tracking-[0.2em] text-white/40 hover:text-gold transition-colors flex items-center gap-2"
+        >
+          Déconnexion <RefreshCw size={10} />
+        </button>
+      ) : (
+        <button className="gold-border px-6 py-2 rounded-full text-xs uppercase tracking-widest font-semibold hover:bg-gold hover:text-black transition-all">
+          Déployer Axiom
+        </button>
+      )}
+    </div>
   </nav>
 );
 
@@ -174,26 +185,26 @@ const DecisionEngine = () => {
       let res: Outcome;
       if (totals.aggressive > totals.prudent && totals.aggressive > 15) {
         res = {
-          title: "The Assertive Move",
-          description: "Your data suggests a power-vacuum. Hedging now results in decayed leverage.",
-          recommendation: "Execute with maximum velocity. Delay is the primary risk factor.",
-          riskProfile: "High - Disruptive",
+          title: "Le Mouvement Assertif",
+          description: "Vos données suggèrent un vide de pouvoir. Hésiter maintenant entraînerait une perte de levier.",
+          recommendation: "Exécutez avec une vélocité maximale. Le délai est le principal facteur de risque.",
+          riskProfile: "Élevé - Disrupteur",
           confidence: 94
         };
       } else if (totals.prudent > totals.aggressive) {
         res = {
-          title: "Consolidated Precision",
-          description: "Market or biological indicators suggest a phase of preservation. Sustainability beats intensity.",
-          recommendation: "Standardize your current gains. Diversify your risk through active rest or lateral moves.",
-          riskProfile: "Conservative - Strategic",
+          title: "Précision Consolidée",
+          description: "Les indicateurs de marché ou biologiques suggèrent une phase de préservation. La durabilité l'emporte sur l'intensité.",
+          recommendation: "Standardisez vos gains actuels. Diversifiez votre risque par un repos actif ou des mouvements latéraux.",
+          riskProfile: "Conservateur - Stratégique",
           confidence: 98
         };
       } else {
         res = {
-          title: "The Balanced Hybrid",
-          description: "Equilibrium detected. A dual-track approach minimizes entropy while capturing upside.",
-          recommendation: "Commit 60% to production and 40% to discovery/rest.",
-          riskProfile: "Balanced",
+          title: "L'Hybride Équilibré",
+          description: "Équilibre détecté. Une approche à double voie minimise l'entropie tout en capturant le potentiel.",
+          recommendation: "Consacrez 60 % à la production et 40 % à la découverte/au repos.",
+          riskProfile: "Équilibré",
           confidence: 88
         };
       }
@@ -217,10 +228,10 @@ const DecisionEngine = () => {
         viewport={{ once: true }}
         className="text-center mb-16 max-w-2xl"
       >
-        <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Engine Core v4.2</span>
-        <h2 className="text-5xl md:text-6xl mb-6">Decision Intelligence</h2>
+        <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Noyau Moteur v4.2</span>
+        <h2 className="text-5xl md:text-6xl mb-6">Intelligence de Décision</h2>
         <p className="text-white/40 leading-relaxed italic">
-          Navigate uncertainty with algorithmic certainty. Select your domain to begin the simulation.
+          Naviguez dans l'incertitude avec une certitude algorithmique. Sélectionnez votre domaine pour commencer la simulation.
         </p>
       </motion.div>
 
@@ -241,7 +252,7 @@ const DecisionEngine = () => {
                 <h3 className="text-2xl mb-2">{s.title}</h3>
                 <p className="text-white/40 text-sm leading-relaxed">{s.description}</p>
                 <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-widest text-gold opacity-0 group-hover:opacity-100 transition-opacity">
-                  Initiate <ArrowRight size={14} />
+                  Initialiser <ArrowRight size={14} />
                 </div>
               </motion.button>
             ))}
@@ -261,8 +272,8 @@ const DecisionEngine = () => {
                 >
                   <RefreshCw size={48} />
                 </motion.div>
-                <h3 className="text-2xl mb-2 italic">Synthesizing Consequences</h3>
-                <p className="text-white/40 text-sm">Processing {selections.length} weighted variables...</p>
+                <h3 className="text-2xl mb-2 italic">Synthèse des Conséquences</h3>
+                <p className="text-white/40 text-sm">Traitement de {selections.length} variables pondérées...</p>
               </motion.div>
             ) : outcome ? (
               <motion.div 
@@ -272,7 +283,7 @@ const DecisionEngine = () => {
                 className="flex flex-col items-center"
               >
                 <div className="mb-6 px-4 py-1 rounded-full bg-gold/20 text-gold text-[10px] uppercase tracking-[0.3em] font-bold">
-                  Recommended Move
+                  Mouvement Recommandé
                 </div>
                 <h3 className="text-4xl md:text-5xl mb-6 gold-gradient">{outcome.title}</h3>
                 <p className="text-xl text-white/80 mb-8 max-w-xl text-center font-light">
@@ -281,18 +292,18 @@ const DecisionEngine = () => {
                 
                 <div className="grid grid-cols-2 gap-4 w-full max-w-lg mb-12">
                   <div className="p-4 rounded-xl border border-white/5 bg-white/5">
-                    <span className="block text-[10px] uppercase text-white/40 tracking-widest mb-1">Risk Profile</span>
+                    <span className="block text-[10px] uppercase text-white/40 tracking-widest mb-1">Profil de Risque</span>
                     <span className="text-sm font-semibold">{outcome.riskProfile}</span>
                   </div>
                   <div className="p-4 rounded-xl border border-white/5 bg-white/5">
-                    <span className="block text-[10px] uppercase text-white/40 tracking-widest mb-1">Confidence Score</span>
+                    <span className="block text-[10px] uppercase text-white/40 tracking-widest mb-1">Indice de Confiance</span>
                     <span className="text-sm font-semibold">{outcome.confidence}%</span>
                   </div>
                 </div>
 
                 <div className="p-6 rounded-2xl bg-gold/5 border border-gold/20 mb-12 w-full max-w-lg">
                   <h4 className="text-xs uppercase text-gold tracking-widest mb-3 flex items-center gap-2">
-                    <BrainCircuit size={14} /> Refined Strategy
+                    <BrainCircuit size={14} /> Stratégie Affinée
                   </h4>
                   <p className="text-white/70 italic text-sm leading-relaxed">
                     {outcome.recommendation}
@@ -303,7 +314,7 @@ const DecisionEngine = () => {
                   onClick={reset}
                   className="text-white/40 hover:text-gold text-xs uppercase tracking-[0.2em] flex items-center gap-2 transition-colors"
                 >
-                  Reset Intelligence Engine <RefreshCw size={12} />
+                  Réinitialiser le Moteur <RefreshCw size={12} />
                 </button>
               </motion.div>
             ) : (
@@ -315,7 +326,7 @@ const DecisionEngine = () => {
                 className="flex flex-col h-full"
               >
                 <div className="flex justify-between items-center mb-12">
-                  <span className="text-[10px] uppercase text-gold tracking-widest">Question {currentStep + 1} of {activeScenario.questions[currentStep + 1] ? activeScenario.questions.length : activeScenario.questions.length}</span>
+                  <span className="text-[10px] uppercase text-gold tracking-widest">Question {currentStep + 1} sur {activeScenario.questions[currentStep + 1] ? activeScenario.questions.length : activeScenario.questions.length}</span>
                   <button onClick={reset} className="text-white/20 hover:text-white transition-colors"><RefreshCw size={16} /></button>
                 </div>
                 
@@ -355,17 +366,17 @@ const FeatureSection = () => (
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Unrivaled Methodology</span>
-            <h2 className="text-4xl md:text-6xl mb-8 leading-tight">Advanced Logic for the Sovereign Decision Maker.</h2>
+            <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Méthodologie Sans Égale</span>
+            <h2 className="text-4xl md:text-6xl mb-8 leading-tight">Logique Avancée pour le Décideur Souverain.</h2>
             <p className="text-white/40 text-lg leading-relaxed mb-12">
-              Most tools use static checklists. Axiom employs dynamic weighted heuristics and consequence simulation to reveal the path of least resistance.
+              La plupart des outils utilisent des listes de contrôle statiques. Axiom emploie des heuristiques pondérées dynamiques et une simulation de conséquences pour révéler le chemin de moindre résistance.
             </p>
             
             <div className="space-y-8">
               {[
-                { icon: BrainCircuit, title: "Adaptive Logic", desc: "Our engine recalibrates based on real-time neuro-chemical and economic inputs." },
-                { icon: Zap, title: "Velocity Oriented", desc: "Prioritizing momentum over perfection where the window of opportunity is narrow." },
-                { icon: ShieldCheck, title: "Risk Mitigation", desc: "Sophisticated stress-testing of every recommended move within our sandbox." }
+                { icon: BrainCircuit, title: "Logique Adaptative", desc: "Notre moteur se recalibre en fonction des entrées neuro-chimiques et économiques en temps réel." },
+                { icon: Zap, title: "Orienté Vélocité", desc: "Prioriser le mouvement sur la perfection lorsque la fenêtre d'opportunité est étroite." },
+                { icon: ShieldCheck, title: "Atténuation des Risques", desc: "Tests de stress sophistiqués de chaque mouvement recommandé au sein de notre bac à sable." }
               ].map((f, i) => (
                 <div key={i} className="flex gap-6">
                   <div className="flex-shrink-0 w-12 h-12 rounded-full gold-border flex items-center justify-center text-gold">
@@ -400,8 +411,8 @@ const FeatureSection = () => (
                </motion.div>
                <div className="relative text-center p-8">
                  <Sparkles className="text-gold mx-auto mb-4" size={32} />
-                 <h3 className="text-2xl font-serif mb-2">Refining Outcomes</h3>
-                 <p className="text-white/30 text-[10px] uppercase tracking-widest font-mono">Iteration 014A // Consequence Verified</p>
+                 <h3 className="text-2xl font-serif mb-2">Affiner les Résultats</h3>
+                 <p className="text-white/30 text-[10px] uppercase tracking-widest font-mono">Itération 014A // Conséquence Vérifiée</p>
                </div>
             </div>
           </motion.div>
@@ -419,21 +430,130 @@ const Footer = () => (
     <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-12">
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded bg-gold flex items-center justify-center text-black text-[10px] font-bold">A</div>
-        <span className="text-sm font-serif tracking-[0.3em] uppercase">Axiom Intelligence</span>
+        <span className="text-sm font-serif tracking-[0.3em] uppercase">Intelligence Axiom</span>
       </div>
       <div className="flex gap-8 text-[10px] uppercase tracking-[0.2em] font-medium text-white/40">
-        <a href="#" className="hover:text-gold transition-colors">Privacy Codex</a>
-        <a href="#" className="hover:text-gold transition-colors">Term of Intelligence</a>
-        <a href="#" className="hover:text-gold transition-colors">Access Console</a>
+        <a href="#" className="hover:text-gold transition-colors">Codex de Confidentialité</a>
+        <a href="#" className="hover:text-gold transition-colors">Conditions d'Intelligence</a>
+        <a href="#" className="hover:text-gold transition-colors">Console d'Accès</a>
       </div>
       <div className="text-[10px] uppercase tracking-[0.2em] text-white/20 italic">
-        © 2026 Axiom Collective. All Rights Reserved.
+        © 2026 Collectif Axiom. Tous droits réservés.
       </div>
     </div>
   </footer>
 );
 
+const AuthPortal = ({ onAuthenticate }: { onAuthenticate: () => void }) => {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    // Simulate auth lag for "prestige" feel
+    setTimeout(() => {
+      onAuthenticate();
+      setIsLoading(false);
+    }, 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-luxury-black flex items-center justify-center p-6 overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gold/[0.03] blur-[150px] rounded-full"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-5">
+           <Layers className="w-full h-full text-white" strokeWidth={0.2} />
+        </div>
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <div className="glass rounded-[2rem] p-10 md:p-14 border-white/10 shadow-2xl relative overflow-hidden">
+          {/* Subtle moving line at the top */}
+          <motion.div 
+            animate={{ x: [-100, 400] }} 
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            className="absolute top-0 left-0 h-[1px] w-24 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50"
+          />
+
+          <div className="text-center mb-12">
+            <div className="w-12 h-12 rounded bg-gold mx-auto mb-6 flex items-center justify-center text-black font-bold text-xl shadow-lg ring-4 ring-gold/10">A</div>
+            <h1 className="text-3xl font-serif mb-2 tracking-tight">Accéder au Collectif</h1>
+            <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-medium">Vérifier l'Identité pour Continuer</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="group">
+                <label className="block text-[10px] uppercase tracking-[0.2em] text-white/40 mb-2 ml-1 group-focus-within:text-gold transition-colors">Identification des Identifiants</label>
+                <input 
+                  type="email" 
+                  placeholder="nom@nexus.com"
+                  required
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 transition-all placeholder:text-white/10" 
+                />
+              </div>
+              <div className="group">
+                <label className="block text-[10px] uppercase tracking-[0.2em] text-white/40 mb-2 ml-1 group-focus-within:text-gold transition-colors">Code d'Accès</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••"
+                  required
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/20 transition-all placeholder:text-white/10" 
+                />
+              </div>
+            </div>
+
+            <button 
+              disabled={isLoading}
+              className="w-full py-4 rounded-xl bg-gold text-black font-bold text-xs uppercase tracking-[0.2em] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  Vérification...
+                </>
+              ) : (
+                <>
+                  Établir la Connexion <ArrowRight size={14} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-12 pt-8 border-t border-white/5 text-center">
+            <p className="text-white/30 text-[10px] uppercase tracking-widest leading-relaxed">
+              {mode === 'login' ? "Non autorisé ?" : "Déjà vérifié ?"} 
+              <button 
+                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                className="ml-2 text-gold hover:text-white transition-colors"
+              >
+                {mode === 'login' ? "Demander des Privilèges d'Accès" : "Retour au Portail d'Accès"}
+              </button>
+            </p>
+          </div>
+        </div>
+
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-8 text-[9px] uppercase tracking-[0.4em] text-white/10"
+        >
+          Lien Sécurisé Chiffré // Axiom Core v4.2
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+};
+
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef });
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -441,9 +561,19 @@ export default function App() {
 
   return (
     <div className="relative selection:bg-gold selection:text-black">
-      <Navbar />
-      
-      {/* Hero Section */}
+      <AnimatePresence>
+        {!isAuthenticated && (
+          <AuthPortal onAuthenticate={() => setIsAuthenticated(true)} />
+        )}
+      </AnimatePresence>
+
+      <Navbar isAuthenticated={isAuthenticated} onSignOut={() => setIsAuthenticated(false)} />
+
+      <motion.div
+        animate={isAuthenticated ? { opacity: 1 } : { opacity: 0 }}
+        className={isAuthenticated ? "" : "pointer-events-none select-none blur-sm"}
+      >
+        {/* Hero Section */}
       <section ref={heroRef} className="relative h-screen flex items-center justify-center overflow-hidden">
         <motion.div 
           style={{ opacity, scale }}
@@ -454,16 +584,16 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <span className="text-gold text-xs uppercase tracking-[0.6em] mb-8 block">Refining Choice Into Outcome</span>
+            <span className="text-gold text-xs uppercase tracking-[0.6em] mb-8 block">Transformer le Choix en Résultat</span>
             <h1 className="text-6xl md:text-8xl lg:text-9xl mb-12 font-serif font-light leading-tight">
-              Axiom <span className="italic">Decision</span> <br className="hidden md:block" /> Intelligence.
+              Intelligence de <br className="hidden md:block" /> <span className="italic">Décision</span> Axiom.
             </h1>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
               <a href="#intelligence" className="px-10 py-5 rounded-full bg-gold text-black font-semibold text-sm uppercase tracking-widest hover:bg-white transition-all flex items-center gap-3">
-                Begin Intelligence Cycle <CircleArrowRight size={18} />
+                Lancer le Cycle d'Intelligence <CircleArrowRight size={18} />
               </a>
               <button className="px-10 py-5 rounded-full gold-border text-white/80 text-sm uppercase tracking-widest hover:text-white hover:bg-white/5 transition-all">
-                Explore The Ecosystem
+                Explorer l'Écosystème
               </button>
             </div>
           </motion.div>
@@ -500,14 +630,14 @@ export default function App() {
       <section className="py-32 border-y border-white/5 bg-luxury-gray">
         <div className="container mx-auto px-6">
            <div className="text-center mb-16">
-             <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Legacy Endorsements</span>
-             <h2 className="text-4xl md:text-5xl">The Axiom Experience</h2>
+             <span className="text-gold text-xs uppercase tracking-[0.4em] mb-4 block">Témoignages de Prestige</span>
+             <h2 className="text-4xl md:text-5xl">L'Expérience Axiom</h2>
            </div>
            <div className="grid md:grid-cols-3 gap-8">
              {[
-               { name: "Julian Thorne", role: "Venture Principal", quote: "The Decision Engine correctly identified a liquidity trap 6 months before our analysts. It's no longer optional." },
-               { name: "Elara Vance", role: "Creative Director", quote: "It brings a level of strategic clarity that I thought was only possible through years of meditation." },
-               { name: "Marcus Blackwell", role: "Competitive Athlete", quote: "I use the Daily Grind mode every morning. It's the coach I didn't know I needed." }
+               { name: "Julian Thorne", role: "Directeur de Capital-Risque", quote: "Le moteur de décision a correctement identifié un piège de liquidité 6 mois avant nos analystes. Ce n'est plus optionnel." },
+               { name: "Elara Vance", role: "Directrice Artistique", quote: "Cela apporte un niveau de clarté stratégique que je pensais possible uniquement par des années de méditation." },
+               { name: "Marcus Blackwell", role: "Athlète de Compétition", quote: "J'utilise le mode Daily Grind tous les matins. C'est le coach que je ne savais pas avoir besoin." }
              ].map((r, i) => (
                <motion.div 
                  key={i} 
@@ -535,10 +665,10 @@ export default function App() {
             viewport={{ once: true }}
           >
             <h2 className="text-5xl md:text-7xl mb-12 max-w-4xl mx-auto font-serif leading-tight">
-              Make your next move with <span className="italic italic-small gold-gradient">absolute</span> confidence.
+              Faites votre prochain mouvement avec une confiance <span className="italic italic-small gold-gradient">absolue</span>.
             </h2>
             <button className="px-12 py-6 rounded-full bg-gold text-black font-bold text-sm uppercase tracking-[0.2em] shadow-2xl hover:bg-white hover:scale-105 transition-all">
-              Initiate Access
+              Initier l'Accès
             </button>
           </motion.div>
         </div>
@@ -548,6 +678,8 @@ export default function App() {
           <Layers className="w-full h-full text-white/5" strokeWidth={0.5} />
         </div>
       </section>
+
+      </motion.div>
 
       <Footer />
     </div>
