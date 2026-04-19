@@ -22,7 +22,7 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isSignedIn(); // Basic profiles might be public for leaderboards
+      allow read: if isSignedIn();
       allow write: if isOwner(userId);
     }
 

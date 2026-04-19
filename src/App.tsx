@@ -6,8 +6,9 @@ import { Quiz } from './pages/Quiz';
 import { Profile } from './pages/Profile';
 import { Auth } from './pages/Auth';
 import { Leaderboard } from './pages/Leaderboard';
-import { useAuth } from './hooks/useAuth';
-import { LogOut, User as UserIcon, Trophy, LayoutDashboard, Home as HomeIcon, Settings, Medal } from 'lucide-react';
+import { Contact } from './pages/Contact';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LogOut, User as UserIcon, Trophy, LayoutDashboard, Home as HomeIcon, Settings, Medal, MessageSquare } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { signOut } from 'firebase/auth';
 
@@ -26,12 +27,16 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         {user && (
           <div className="mb-12 text-center">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-border-dim to-primary/20 mx-auto mb-4 border-2 border-primary p-1">
-              <div className="w-full h-full rounded-full bg-card-bg flex items-center justify-center">
-                <UserIcon className="text-primary" size={32} />
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-border-dim to-primary/20 mx-auto mb-4 border-2 border-primary overflow-hidden relative group">
+              <div className="w-full h-full bg-card-bg flex items-center justify-center">
+                {userData?.photoURL ? (
+                  <img src={userData.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <UserIcon className="text-primary" size={32} />
+                )}
               </div>
             </div>
-            <div className="font-bold text-sm">{userData?.username || 'Guest Scholar'}</div>
+            <div className="font-bold text-sm truncate px-4">{userData?.username || 'Guest Scholar'}</div>
             <div className="text-[10px] uppercase tracking-wider text-primary font-black mt-1">
               {userData ? ((userData.avgScore || 0) > 0.8 ? 'Expert Rank' : 'Rising Star') : 'Initializing...'}
             </div>
@@ -44,6 +49,9 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           <Link to="/leaderboard" className={`side-nav-item ${location === '/leaderboard' ? 'active' : ''}`}>
             <Trophy size={18} /> Leaderboard
+          </Link>
+          <Link to="/contact" className={`side-nav-item ${location === '/contact' ? 'active' : ''}`}>
+            <MessageSquare size={18} /> Contact Us
           </Link>
           {user && (
             <>
@@ -78,6 +86,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         <header className="md:hidden border-b border-border-dim bg-card-bg p-4 flex justify-between items-center sticky top-0 z-50">
            <Link to="/" className="font-bold text-primary italic">QuizPro</Link>
            <div className="flex gap-4">
+             <Link to="/leaderboard"><Trophy size={20} /></Link>
+             <Link to="/contact"><MessageSquare size={20} /></Link>
              <Link to="/dashboard"><LayoutDashboard size={20} /></Link>
              <Link to="/profile"><UserIcon size={20} /></Link>
            </div>
@@ -91,13 +101,14 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+function AppRoutes() {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050B18] flex items-center justify-center">
+      <div className="min-h-screen bg-[#050B18] flex flex-col items-center justify-center space-y-4">
         <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <div className="text-[10px] text-primary/50 uppercase tracking-[4px] font-black animate-pulse">Initializing System</div>
       </div>
     );
   }
@@ -112,9 +123,18 @@ export default function App() {
           <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
           <Route path="/quiz/:categoryId" element={user ? <Quiz /> : <Navigate to="/auth" />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>
     </BrowserRouter>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }

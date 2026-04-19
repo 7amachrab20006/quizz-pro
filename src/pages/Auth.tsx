@@ -24,8 +24,19 @@ export function Auth() {
 
     try {
       if (mode === 'login') {
-        await signInWithEmailAndPassword(auth, email, password);
-        navigate('/dashboard');
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          navigate('/dashboard');
+        } catch (err: any) {
+          if (err.code === 'auth/user-not-found') {
+            setError('This email address is not recognized. Please sign up first.');
+          } else if (err.code === 'auth/invalid-credential') {
+            // Modern Firebase error for security
+            setError('Invalid credentials. Check your email or sign up if you do not have an account.');
+          } else {
+            setError(err.message);
+          }
+        }
       } else if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: username });

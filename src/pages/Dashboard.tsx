@@ -33,10 +33,21 @@ export function Dashboard() {
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="space-y-2"
+          className="flex items-center gap-6"
         >
-          <h1 className="text-4xl font-light tracking-tight">Welcome back, <span className="font-bold underline decoration-primary decoration-4 underline-offset-8">{userData.username}.</span></h1>
-          <p className="text-text-dim text-sm">You have several active domains waiting for a new challenge.</p>
+          <div className="w-20 h-20 rounded-2xl bg-bg-dark border border-border-dim overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.1)]">
+            {userData.photoURL ? (
+              <img src={userData.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                <Icons.User size={32} className="text-primary opacity-40" />
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-4xl font-light tracking-tight">Welcome back, <span className="font-bold underline decoration-primary decoration-4 underline-offset-8">{userData.username}.</span></h1>
+            <p className="text-text-dim text-sm">You have several active domains waiting for a new challenge.</p>
+          </div>
         </motion.div>
         
         <div className="text-right hidden md:block">

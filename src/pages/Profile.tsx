@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { motion } from 'motion/react';
-import { User, Mail, Calendar, Settings, Activity, ShieldCheck, MapIcon as HistoryIcon, Star } from 'lucide-react';
-import { formatDate, cn } from '../lib/utils';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Mail, Calendar, Activity, ShieldCheck, Star, Camera, Loader2, CheckCircle2 } from 'lucide-react';
+import { formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { db, storage, auth } from '../lib/firebase';
 
 export function Profile() {
-  const { user, userData, loading } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  if (loading) return (
+  if (authLoading) return (
      <div className="h-full flex items-center justify-center p-24">
         <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
      </div>
@@ -25,6 +32,88 @@ export function Profile() {
      </div>
   );
 
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    setSuccess(false);
+    setError(null);
+
+    try {
+      // 1. Create a promise-based image loader and compressor
+      const processImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 400;
+              const MAX_HEIGHT = 400;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, width, height);
+              
+              // Compress to JPEG for smaller footprint
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              resolve(dataUrl);
+            };
+            img.onerror = reject;
+            img.src = event.target?.result as string;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      const compressedBase64 = await processImage(file);
+
+      // 2. Update Firestore immediately (Bypasses Storage CORS issues)
+      await updateDoc(doc(db, 'users', user.uid), {
+        photoURL: compressedBase64,
+        lastActivity: new Date().toISOString()
+      });
+
+      // 3. Update Auth purely for session consistency
+      try {
+        await updateProfile(user, { photoURL: compressedBase64 });
+      } catch (authErr) {
+        console.warn("Auth profile update skipped, data saved in DB.");
+      }
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Error processing photo:", err);
+      setError("Failed to process photo. Ensure it is a valid image.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto py-12 space-y-12">
       {/* Profile Header - Minimal Sidebar Layout */}
@@ -35,14 +124,73 @@ export function Profile() {
             animate={{ y: 0, opacity: 1 }}
             className="clean-card text-center space-y-6"
           >
-            <div className="w-32 h-32 bg-bg-dark rounded-full mx-auto border border-border-dim flex items-center justify-center relative group">
-              <User size={64} className="text-primary opacity-50 shadow-[0_0_20px_rgba(212,175,55,0.2)]" />
-              <div className="absolute inset-0 rounded-full border border-primary/20 scale-110 group-hover:scale-125 transition-transform duration-500"></div>
+            <div 
+              onClick={handlePhotoClick}
+              className="w-32 h-32 bg-bg-dark rounded-full mx-auto border border-border-dim flex items-center justify-center relative group cursor-pointer overflow-hidden"
+            >
+              <AnimatePresence mode="wait">
+                {uploading ? (
+                  <motion.div 
+                    key="loading"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-bg-dark/80 flex items-center justify-center z-10"
+                  >
+                    <Loader2 className="text-primary animate-spin" size={32} />
+                  </motion.div>
+                ) : success ? (
+                  <motion.div 
+                    key="success"
+                    initial={{ scale: 0.5, opacity: 0 }} 
+                    animate={{ scale: 1, opacity: 1 }} 
+                    exit={{ scale: 0.5, opacity: 0 }}
+                    className="absolute inset-0 bg-green-500/20 flex items-center justify-center z-10"
+                  >
+                    <CheckCircle2 className="text-green-500" size={32} />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+
+              {userData.photoURL ? (
+                <img 
+                  src={userData.photoURL} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <User size={64} className="text-primary opacity-50" />
+              )}
+              
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity">
+                <Camera size={24} className="text-white mb-1" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-white">Change Photo</span>
+              </div>
+              <input 
+                type="file" 
+                hidden 
+                ref={fileInputRef} 
+                onChange={handleFileChange}
+                accept="image/*"
+              />
             </div>
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-[10px] text-red-500 font-black uppercase tracking-widest bg-red-500/5 py-2 px-3 rounded border border-red-500/10"
+              >
+                {error}
+              </motion.div>
+            )}
+            
             <div>
-              <h1 className="text-3xl font-black tracking-tighter decoration-primary/50 underline-offset-4 decoration-2">{userData.username}</h1>
+              <h1 className="text-3xl font-black tracking-tighter underline-offset-4 decoration-primary decoration-2">{userData.username}</h1>
               <p className="text-text-dim text-sm font-medium mt-1">{userData.email}</p>
             </div>
+            
             <div className="flex items-center justify-center gap-2">
                <ShieldCheck size={14} className="text-primary" />
                <span className="text-[10px] uppercase tracking-[3px] text-text-dim font-black">Verified Individual</span>
