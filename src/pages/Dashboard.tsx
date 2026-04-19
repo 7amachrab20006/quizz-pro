@@ -7,9 +7,24 @@ import * as Icons from 'lucide-react';
 import { formatDate } from '../lib/utils';
 
 export function Dashboard() {
-  const { user, userData } = useAuth();
+  const { user, userData, loading } = useAuth();
 
-  if (!user || !userData) return null;
+  if (loading) return (
+     <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+     </div>
+  );
+
+  if (!user || !userData) return (
+     <div className="h-full flex flex-col items-center justify-center space-y-6 text-center">
+        <div className="text-primary opacity-20"><Icons.ShieldAlert size={64} /></div>
+        <div className="space-y-2">
+           <h2 className="text-2xl font-bold tracking-tight">Identity Records Not Found</h2>
+           <p className="text-text-dim text-sm max-w-xs">We encountered an issue synchronizing your scholarly profile. Please try re-authenticating.</p>
+        </div>
+        <Link to="/auth" className="btn-minimal px-8">Return to Portal</Link>
+     </div>
+  );
 
   return (
     <div className="space-y-12 h-full flex flex-col">

@@ -24,16 +24,16 @@ function Layout({ children }: { children: React.ReactNode }) {
           <span className="text-lg font-bold tracking-tight">QuizPro</span>
         </div>
 
-        {user && userData && (
+        {user && (
           <div className="mb-12 text-center">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-border-dim to-primary/20 mx-auto mb-4 border-2 border-primary p-1">
               <div className="w-full h-full rounded-full bg-card-bg flex items-center justify-center">
                 <UserIcon className="text-primary" size={32} />
               </div>
             </div>
-            <div className="font-bold text-sm">{userData.username}</div>
+            <div className="font-bold text-sm">{userData?.username || 'Guest Scholar'}</div>
             <div className="text-[10px] uppercase tracking-wider text-primary font-black mt-1">
-              {(userData.avgScore || 0) > 0.8 ? 'Expert Rank' : 'Rising Star'}
+              {userData ? ((userData.avgScore || 0) > 0.8 ? 'Expert Rank' : 'Rising Star') : 'Initializing...'}
             </div>
           </div>
         )}

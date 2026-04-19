@@ -6,9 +6,24 @@ import { formatDate, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 
 export function Profile() {
-  const { user, userData } = useAuth();
+  const { user, userData, loading } = useAuth();
 
-  if (!user || !userData) return null;
+  if (loading) return (
+     <div className="h-full flex items-center justify-center p-24">
+        <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+     </div>
+  );
+
+  if (!user || !userData) return (
+     <div className="h-full flex flex-col items-center justify-center space-y-6 text-center p-24">
+        <div className="text-primary opacity-20"><User size={64} /></div>
+        <div className="space-y-2">
+           <h2 className="text-2xl font-bold tracking-tight">Profile Data Missing</h2>
+           <p className="text-text-dim text-sm max-w-xs">We couldn't retrieve your archival history. Ensure your connection is stable.</p>
+        </div>
+        <Link to="/" className="btn-minimal px-8">Back to Home</Link>
+     </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto py-12 space-y-12">
