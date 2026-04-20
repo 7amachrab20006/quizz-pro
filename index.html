@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
   </head>
-  <body>
+  <body class="bg-[#05070A]">
     <div id="root"></div>
+    <div id="error-display" style="display:none; position:fixed; inset:0; background:#05070A; color:#D4AF37; padding:40px; font-family:sans-serif; z-index:9999;">
+      <h1 style="font-size:24px; margin-bottom:16px;">System Initialization Error</h1>
+      <pre id="error-content" style="background:#10141D; padding:20px; border-radius:8px; border:1px solid #1F2937; overflow:auto;"></pre>
+      <p style="margin-top:20px; color:#9CA3AF; font-size:14px;">Please check your Environment Variables and Firebase Configuration.</p>
+    </div>
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        document.getElementById('error-display').style.display = 'block';
+        document.getElementById('error-content').innerText = 
+          msg + '\n\nFile: ' + url + '\nLine: ' + lineNo + '\n\n' + (error ? error.stack : '');
+        return false;
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

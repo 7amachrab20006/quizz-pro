@@ -4,14 +4,26 @@ import { getFirestore, doc, getDocFromCache, getDocFromServer } from 'firebase/f
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+let app;
+let auth: any;
+let db: any;
+let storage: any;
 
-// Use the explicit database ID from config
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+try {
+  if (!firebaseConfig || !firebaseConfig.apiKey) {
+    throw new Error("firebase-applet-config.json is missing or invalid.");
+  }
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  storage = getStorage(app);
+} catch (e) {
+  console.error("Firebase Initialization Error:", e);
+  // Throwing here will be caught by the window.onerror we added to index.html
+  throw e;
+}
 
-// Initialize Cloud Storage
-export const storage = getStorage(app);
+export { auth, db, storage };
 
 // Connection test as per instructions
 async function testConnection() {
