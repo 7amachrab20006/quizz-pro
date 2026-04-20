@@ -52,10 +52,53 @@ export async function generateQuizQuestions(categoryName: string, difficulty: st
 
     const text = response.text;
     if (!text) throw new Error("No data received from Gemini");
-    
     return JSON.parse(text);
   } catch (error) {
     console.error("Gemini Generation Error:", error);
+    throw error;
+  }
+}
+
+export interface DecisionResult {
+  reasoning: string;
+  recommendation: string;
+  decisionScore: number;
+}
+
+export async function analyzeDecision(dilemma: string, context?: string): Promise<DecisionResult> {
+  const prompt = `Act as a logical, highly intelligent AI Life Advisor. 
+  A user has presented the following dilemma: "${dilemma}".
+  Context (if any): "${context || 'None provided'}".
+  
+  Evaluate this dilemma objectively. Consider long-term consequences, personal growth, and practical logic.
+  Provide:
+  1. A clear reasoning for your evaluation.
+  2. A definitive final recommendation.
+  3. A "Decision Score" from 0 to 100 representing how confident this choice is (100 is high certainty).
+  
+  Provide the response in the following JSON format:
+  {
+    "reasoning": "...",
+    "recommendation": "...",
+    "decisionScore": 85
+  }`;
+
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("No data received from Advisor");
+    
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Advisor Analysis Error:", error);
     throw error;
   }
 }

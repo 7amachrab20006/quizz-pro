@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { CATEGORIES, Question } from '../lib/data';
 import { db, auth } from '../lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
-import { Timer, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Trophy, RefreshCw, BarChart, Sparkles, Lock } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { toPng } from 'html-to-image';
+import { Timer, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Trophy, RefreshCw, BarChart, Sparkles, Lock, Share2, Download, ExternalLink, Gamepad2, Zap } from 'lucide-react';
+import { cn, getRank } from '../lib/utils';
 import { generateQuizQuestions } from '../services/geminiService';
+import { LEVEL_THRESHOLDS, getLevel } from '../lib/constants';
 
 export function Quiz() {
   const { categoryId } = useParams();
@@ -22,11 +24,15 @@ export function Quiz() {
   const [isLocked, setIsLocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [isFinished, setIsFinished] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [timerEnabled, setTimerEnabled] = useState(true);
   const [history, setHistory] = useState<{questionId: string, correct: boolean}[]>([]);
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState<string | null>(null);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [displayedXP, setDisplayedXP] = useState(0);
 
   useEffect(() => {
     async function initQuiz() {
@@ -60,8 +66,40 @@ export function Quiz() {
     initQuiz();
   }, [category]);
 
+    const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
+    const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
+    const earnedXP = category ? Math.round((xpGains[category.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1))) + (percentage === 100 ? 50 : 0) : 0;
+
+    // Effect for XP count-up has been moved to top level
+    useEffect(() => {
+      if (!isFinished) return;
+      let start = 0;
+      const end = earnedXP;
+      if (start === end) {
+        setDisplayedXP(end);
+        return;
+      }
+      
+      const duration = 1500;
+      const stepTime = 16;
+      const steps = duration / stepTime;
+      const increment = end / steps;
+      
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= end) {
+          setDisplayedXP(end);
+          clearInterval(timer);
+        } else {
+          setDisplayedXP(Math.floor(start));
+        }
+      }, stepTime);
+      
+      return () => clearInterval(timer);
+    }, [earnedXP, isFinished]);
+  
   useEffect(() => {
-    if (questions.length === 0 || isFinished || isLocked) return;
+    if (questions.length === 0 || isFinished || isLocked || !timerEnabled || !gameStarted) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -143,17 +181,15 @@ export function Quiz() {
       
       // XP Multiplier: 1.0x (default), up to 2.0x for 10+ streak
       const multiplier = 1 + (Math.min(newStreak, 10) * 0.1);
-      const earnedXP = Math.round(baseXP * (percentage / 100) * multiplier);
+      let earnedXP = Math.round(baseXP * (percentage / 100) * multiplier);
+      
+      // Bonus XP for Perfect Score
+      if (isPerfect) {
+        earnedXP += 50; 
+      }
       
       const currentXP = (userData?.xp || 0) + earnedXP;
-      const currentLevel = userData?.level || 1;
-      
-      // Level thresholds
-      const thresholds = [0, 50, 120, 200, 350, 550, 800, 1100, 1500, 2000];
-      let newLevel = currentLevel;
-      while (newLevel < thresholds.length && currentXP >= thresholds[newLevel]) {
-        newLevel++;
-      }
+      const newLevel = getLevel(currentXP);
 
       await updateDoc(userRef, {
         totalQuizzes: newTotal,
@@ -237,71 +273,206 @@ export function Quiz() {
   );
 
   if (isFinished) {
-    const percentage = (score / questions.length) * 100;
     const feedback = percentage === 100 ? "You are a genius 🧠" : 
                     percentage >= 80 ? "Expert Level! 🏆" :
                     percentage >= 60 ? "Nice work! 🎓" :
                     percentage >= 40 ? "Keep studying... 📚" :
                     "Bro... you need help 😭";
 
-    // Re-calculating XP for display logic (matches the save logic)
-    const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
-    const earnedXP = Math.round((xpGains[category.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1)));
-    const leveledUp = userData?.level && userData.xp + earnedXP >= [0, 50, 120, 200, 350, 550, 800, 1100, 1500, 2000][userData.level];
+    const leveledUp = userData?.level && getLevel(userData.xp + earnedXP) > userData.level;
+    
+    const handleDownload = async () => {
+      if (cardRef.current === null) return;
+      try {
+        const dataUrl = await toPng(cardRef.current, { cacheBust: true, backgroundColor: '#050505' });
+        const link = document.createElement('a');
+        link.download = `quiz-result-${category.id}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error("Download failed:", err);
+      }
+    };
+
+    const handleShare = async () => {
+      const shareText = `I scored ${score}/${questions.length} on ${category.name} and reached ${getRank(userData?.level || 1)} Rank on QuizMaster Pro! Can you beat me?`;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'QuizMaster Pro Result',
+            text: shareText,
+            url: window.location.origin,
+          });
+        } catch (err) {
+          console.error("Share failed:", err);
+        }
+      } else {
+        navigator.clipboard.writeText(shareText + "\n" + window.location.origin);
+        alert("Result copied to clipboard!");
+      }
+    };
 
     return (
-      <div className="flex items-center justify-center min-h-[70vh] py-12">
+      <div className="flex items-center justify-center min-h-[70vh] py-12 px-4">
         <motion.div 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="clean-card text-center max-w-lg w-full py-12 space-y-10 relative overflow-hidden"
+          className="max-w-2xl w-full space-y-8"
         >
-          {leveledUp && (
-            <motion.div 
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="absolute top-0 left-0 right-0 bg-primary/20 border-b border-primary/30 py-2 text-[10px] font-black uppercase tracking-[5px] text-primary"
-            >
-              🎉 New Level Achieved!
-            </motion.div>
-          )}
+          {/* Main Card */}
+          <div className="clean-card text-center py-12 space-y-10 relative overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.1)]">
+            {leveledUp && (
+              <motion.div 
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="absolute top-0 left-0 right-0 bg-primary text-bg-dark py-2 text-[10px] font-black uppercase tracking-[5px]"
+              >
+                🎉 LEVEL UP ACHIEVED!
+              </motion.div>
+            )}
 
-          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
-            <Trophy className="text-primary" size={48} />
+            <div className="space-y-4">
+              <motion.div 
+                animate={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20 shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+              >
+                <Trophy className="text-primary" size={48} />
+              </motion.div>
+              <h2 className="text-5xl font-black mb-2 tracking-tighter italic uppercase">Domain Conquered</h2>
+              <p className="text-text-dim font-bold uppercase tracking-[3px] text-xs underline decoration-primary decoration-2 underline-offset-8">{feedback}</p>
+            </div>
+            
+            {/* Stats Card (The Shareable Part) */}
+            <div ref={cardRef} className="bg-bg-dark/50 border border-white/5 rounded-2xl p-8 mx-4 md:mx-12 space-y-8 relative">
+               {/* Branding for share */}
+               <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-20 pointer-events-none">
+                  <span className="text-[8px] font-black tracking-[8px] uppercase">QuizMaster Pro</span>
+               </div>
+               
+               <div className="flex justify-between items-center text-left">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-text-dim mb-1">Knowledge Rank</div>
+                    <div className="text-2xl font-black text-primary italic uppercase">{getRank(userData?.level || 1)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-text-dim mb-1">Category</div>
+                    <div className="text-xl font-bold">{category.name}</div>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-3 gap-4 py-6 border-y border-white/5">
+                <div className="space-y-1">
+                  <div className="stat-value-gold text-3xl font-black italic">{Math.round(percentage)}%</div>
+                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">Accuracy</div>
+                </div>
+                <div className="border-x border-white/10 space-y-1">
+                  <div className="stat-value-gold text-3xl font-black italic">{score}/{questions.length}</div>
+                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">Points</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="stat-value-gold text-3xl font-black italic">+{displayedXP}</div>
+                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">XP Gained</div>
+                </div>
+               </div>
+
+               {percentage === 100 && (
+                 <div className="flex items-center justify-center gap-2 text-[10px] font-black text-green-400 uppercase tracking-widest animate-pulse">
+                    <Sparkles size={14} /> Perfect Score Bonus: +50 XP
+                 </div>
+               )}
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4 px-12">
+              <button 
+                onClick={handleShare}
+                className="btn-minimal flex-1 gap-2 py-4"
+              >
+                <Share2 size={18} /> Share Result
+              </button>
+              <button 
+                onClick={handleDownload}
+                className="btn-minimal flex-1 gap-2 py-4"
+              >
+                <Download size={18} /> Save Summary
+              </button>
+            </div>
           </div>
 
-          <div>
-            <h2 className="text-4xl font-black mb-2 tracking-tight">Quiz Complete!</h2>
-            <p className="text-text-dim font-medium uppercase tracking-[2px] text-xs underline decoration-primary underline-offset-4">{feedback}</p>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4 border-y border-white/5 mx-8 py-6">
-             <div className="space-y-1">
-               <div className="stat-value-gold text-2xl">{Math.round(percentage)}%</div>
-               <div className="stat-label-dim !text-[9px]">Accuracy</div>
-             </div>
-             <div className="border-x border-white/10 space-y-1">
-               <div className="stat-value-gold text-2xl">{score}/{questions.length}</div>
-               <div className="stat-label-dim !text-[9px]">Score</div>
-             </div>
-             <div className="space-y-1">
-               <div className="stat-value-gold text-2xl">+{earnedXP}</div>
-               <div className="stat-label-dim !text-[9px]">XP Gained</div>
-             </div>
-          </div>
-
-          <div className="space-y-4 pt-4 px-10">
+          <div className="flex flex-col md:flex-row gap-4 px-4">
             <button 
               onClick={() => window.location.reload()}
-              className="btn-minimal-filled w-full"
+              className="btn-minimal-filled flex-1 py-4 uppercase font-black italic tracking-tighter"
             >
-              <RefreshCw size={18} /> Restart Domain
+              <RefreshCw size={18} className="mr-2" /> Play Again
             </button>
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className="btn-minimal w-full"
+            <Link 
+              to="/leaderboard"
+              className="btn-minimal flex-1 py-4 uppercase font-black italic tracking-tighter text-center flex items-center justify-center"
             >
-              <BarChart size={18} /> View Statistics
+              <BarChart size={18} className="mr-2" /> Global Ranks
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!gameStarted && questions.length > 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh] py-12 px-4">
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="clean-card max-w-xl w-full p-12 text-center space-y-10"
+        >
+          <div className="space-y-4">
+             <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20">
+               <Gamepad2 className="text-primary" size={40} />
+             </div>
+             <h2 className="text-4xl font-black uppercase italic tracking-tighter">Prepare For Battle</h2>
+             <p className="text-text-dim text-sm px-8">You are about to enter the <span className="text-white font-bold">{category.name}</span> domain. High accuracy awards massive XP.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-left p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="text-[10px] font-black text-text-dim uppercase mb-1">Domain</div>
+              <div className="font-bold text-sm tracking-tight">{category.name}</div>
+            </div>
+            <div className="text-left p-4 rounded-xl bg-white/5 border border-white/5">
+              <div className="text-[10px] font-black text-text-dim uppercase mb-1">Difficulty</div>
+              <div className="font-bold text-sm tracking-tight text-primary uppercase">{category.difficulty}</div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+               <div className="flex items-center gap-3">
+                 <Timer size={20} className="text-primary" />
+                 <div className="text-left">
+                    <div className="font-bold text-sm">Timer Mode</div>
+                    <div className="text-[10px] text-text-dim">30s pressure per question</div>
+                 </div>
+               </div>
+               <button 
+                 onClick={() => setTimerEnabled(!timerEnabled)}
+                 className={cn(
+                   "w-12 h-6 rounded-full transition-colors relative",
+                   timerEnabled ? "bg-primary" : "bg-white/10"
+                 )}
+               >
+                 <motion.div 
+                   animate={{ x: timerEnabled ? 24 : 2 }}
+                   className="w-5 h-5 bg-bg-dark rounded-full absolute top-0.5" 
+                 />
+               </button>
+            </div>
+
+            <button 
+              onClick={() => setGameStarted(true)}
+              className="btn-minimal-filled w-full text-xl py-6 rounded-xl shadow-[0_0_30px_rgba(212,175,55,0.3)] group"
+            >
+              INITIATE CHALLENGE <Zap size={20} className="ml-2 group-hover:scale-125 transition-transform" />
             </button>
           </div>
         </motion.div>

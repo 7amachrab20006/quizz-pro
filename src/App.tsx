@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Home } from './pages/Home';
+import { DecisionSimulator } from './pages/DecisionSimulator';
 import { Dashboard } from './pages/Dashboard';
 import { Quiz } from './pages/Quiz';
 import { Profile } from './pages/Profile';
@@ -9,6 +10,7 @@ import { Leaderboard } from './pages/Leaderboard';
 import { Contact } from './pages/Contact';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import * as Icons from 'lucide-react';
 import { LogOut, User as UserIcon, Trophy, LayoutDashboard, Home as HomeIcon, Settings, Medal, MessageSquare, Menu, X } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -54,6 +56,9 @@ function Layout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 space-y-2">
           <Link to="/" className={`side-nav-item ${location === '/' ? 'active' : ''}`}>
             <HomeIcon size={18} /> Home
+          </Link>
+          <Link to="/simulator" className={`side-nav-item ${location === '/simulator' ? 'active' : ''}`}>
+            <Icons.BrainCircuit size={18} /> Decision Advisor
           </Link>
           <Link to="/leaderboard" className={`side-nav-item ${location === '/leaderboard' ? 'active' : ''}`}>
             <Trophy size={18} /> Leaderboard
@@ -203,9 +208,11 @@ function AppRoutes() {
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/simulator" element={<DecisionSimulator />} />
           <Route path="/auth" element={!user ? <Auth /> : <Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/auth" />} />
           <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
+          <Route path="/profile/:profileUserId" element={<Profile />} />
           <Route path="/quiz/:categoryId" element={user ? <Quiz /> : <Navigate to="/auth" />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/contact" element={<Contact />} />

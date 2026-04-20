@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { Trophy, Medal, Star, User as UserIcon } from 'lucide-react';
+import { Trophy, Medal, Star, User as UserIcon, ExternalLink } from 'lucide-react';
 import { cn, getRank } from '../lib/utils';
+import { Link } from 'react-router-dom';
 
 interface LeaderboardEntry {
   userId: string;
@@ -52,13 +53,11 @@ export function Leaderboard() {
         ) : (
           <div className="divide-y divide-border-dim">
             {leaders.map((leader, index) => (
-              <motion.div
+              <Link
                 key={leader.userId}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+                to={`/profile/${leader.userId}`}
                 className={cn(
-                  "flex items-center justify-between p-8 transition-colors hover:bg-white/5",
+                  "flex items-center justify-between p-8 transition-all hover:bg-white/5 active:scale-[0.99] group",
                   index === 0 && "bg-primary/5"
                 )}
               >
@@ -67,7 +66,7 @@ export function Leaderboard() {
                     {index + 1}
                   </div>
                   <div className="relative">
-                    <div className="w-16 h-16 bg-bg-dark rounded-2xl flex items-center justify-center border border-border-dim">
+                    <div className="w-16 h-16 bg-bg-dark rounded-2xl flex items-center justify-center border border-border-dim group-hover:border-primary/50 transition-colors">
                       {index === 0 ? <Trophy className="text-primary" size={28} /> : <UserIcon className="text-text-dim" size={24} />}
                     </div>
                   </div>
@@ -86,11 +85,16 @@ export function Leaderboard() {
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="stat-value-gold text-3xl">{Math.round((leader.avgScore || 0) * 100)}%</div>
-                  <div className="stat-label-dim">Accuracy Rating</div>
+                <div className="flex items-center gap-8">
+                  <div className="text-right">
+                    <div className="stat-value-gold text-3xl">{Math.round((leader.avgScore || 0) * 100)}%</div>
+                    <div className="stat-label-dim">Accuracy Rating</div>
+                  </div>
+                  <div className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ExternalLink size={18} />
+                  </div>
                 </div>
-              </motion.div>
+              </Link>
             ))}
             {leaders.length === 0 && (
               <div className="p-24 text-center">

@@ -37,6 +37,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unsubscribeDoc = onSnapshot(doc(db, 'users', firebaseUser.uid), 
           (docSnap) => {
             if (docSnap.exists()) {
+              const now = new Date();
+              const lastActivity = docSnap.data().lastActivity ? new Date(docSnap.data().lastActivity) : null;
+              let currentStreak = docSnap.data().streak || 0;
+              let highestStreak = docSnap.data().highestStreak || 0;
+
+              if (lastActivity) {
+                const dayDiff = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+                
+                // If it's a new day
+                if (dayDiff === 1) {
+                  currentStreak += 1;
+                  highestStreak = Math.max(highestStreak, currentStreak);
+                  const loginBonusXP = 20 * currentStreak; // 20 XP base * streak multiplier
+                  setDoc(doc(db, 'users', firebaseUser.uid), { 
+                    streak: currentStreak, 
+                    highestStreak,
+                    xp: (docSnap.data().xp || 0) + loginBonusXP,
+                    lastActivity: now.toISOString() 
+                  }, { merge: true });
+                } else if (dayDiff > 1) {
+                  // Streak broken
+                  currentStreak = 1;
+                  setDoc(doc(db, 'users', firebaseUser.uid), { 
+                    streak: currentStreak,
+                    lastActivity: now.toISOString() 
+                  }, { merge: true });
+                }
+              }
+
               setUserData(docSnap.data());
               setLoading(false);
             } else {

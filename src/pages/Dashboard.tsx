@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { CATEGORIES } from '../lib/data';
 import * as Icons from 'lucide-react';
 import { formatDate, cn, getRank } from '../lib/utils';
+import { LEVEL_THRESHOLDS } from '../lib/constants';
 
 export function Dashboard() {
   const { user, userData, loading } = useAuth();
@@ -28,9 +29,8 @@ export function Dashboard() {
 
   const currentLevel = userData.level || 1;
   const currentXP = userData.xp || 0;
-  const thresholds = [0, 50, 120, 200, 350, 550, 800, 1100];
-  const nextXP = thresholds[currentLevel] || thresholds[thresholds.length - 1];
-  const prevXP = thresholds[currentLevel - 1] || 0;
+  const nextXP = LEVEL_THRESHOLDS[currentLevel] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  const prevXP = LEVEL_THRESHOLDS[currentLevel - 1] || 0;
   const progress = ((currentXP - prevXP) / (nextXP - prevXP)) * 100;
 
   return (

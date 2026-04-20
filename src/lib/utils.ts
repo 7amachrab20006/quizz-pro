@@ -6,16 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getRank(level: number): string {
-  if (level >= 10) return "Zenith";
-  if (level >= 9) return "Grandmaster";
-  if (level >= 8) return "Sage";
-  if (level >= 7) return "Elite";
-  if (level >= 6) return "Specialist";
-  if (level >= 5) return "Expert";
-  if (level >= 4) return "Adept";
-  if (level >= 3) return "Scholar";
-  if (level >= 2) return "Apprentice";
-  return "Novice";
+  if (level >= 10) return "Elite";
+  if (level >= 8) return "Platinum";
+  if (level >= 5) return "Gold";
+  if (level >= 3) return "Silver";
+  return "Bronze";
 }
 
 export function formatDate(date: string | Date) {
