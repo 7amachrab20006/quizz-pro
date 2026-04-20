@@ -6,8 +6,11 @@ let aiInstance: GoogleGenAI | null = null;
 function getAI() {
   if (!aiInstance) {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is missing. Please add it to your environment variables.");
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
+      throw new Error(
+        "GEMINI_API_KEY is missing. Please add it to your environment variables in AI Studio: " +
+        "Go to 'Settings' -> 'API Keys' -> 'Custom Variables' and add GEMINI_API_KEY with your key from Google AI Studio."
+      );
     }
     aiInstance = new GoogleGenAI({ apiKey });
   }
@@ -89,7 +92,16 @@ export async function analyzeDecision(dilemma: string, context?: string): Promis
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
-        responseMimeType: "application/json"
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            reasoning: { type: Type.STRING, description: "Detailed logical reasoning" },
+            recommendation: { type: Type.STRING, description: "Final clear recommendation" },
+            decisionScore: { type: Type.INTEGER, description: "Certainty score from 0-100" }
+          },
+          required: ["reasoning", "recommendation", "decisionScore"]
+        }
       }
     });
 
