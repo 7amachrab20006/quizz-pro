@@ -1,3 +1,4 @@
+// System Version: 2.4.1 - Updated AI Advisor Logic
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question } from "../lib/data";
 
@@ -5,11 +6,14 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Attempt to retrieve the key from common environment locations
+    const apiKey = process.env.GEMINI_API_KEY || (window as any).GEMINI_API_KEY;
+    
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
       throw new Error(
-        "GEMINI_API_KEY is missing. Please add it to your environment variables in AI Studio: " +
-        "Go to 'Settings' -> 'API Keys' -> 'Custom Variables' and add GEMINI_API_KEY with your key from Google AI Studio."
+        "CRITICAL: GEMINI_API_KEY is not configured. " +
+        "Please go to Application Settings -> API Keys and add a new Custom Variable 'GEMINI_API_KEY' with your key from Google AI Studio. " +
+        "Then restart the application to apply changes."
       );
     }
     aiInstance = new GoogleGenAI({ apiKey });

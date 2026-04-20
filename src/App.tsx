@@ -90,7 +90,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="mt-auto opacity-30 text-[10px] uppercase tracking-widest font-bold">
-          System V2.4.0
+          System V2.4.1 [LATEST]
         </div>
       </aside>
 
