@@ -6,8 +6,7 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    // Attempt to retrieve the key from common environment locations
-    const apiKey = process.env.GEMINI_API_KEY || (window as any).GEMINI_API_KEY;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
       throw new Error(
@@ -30,7 +29,7 @@ export async function generateQuizQuestions(categoryName: string, difficulty: st
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -93,7 +92,7 @@ export async function analyzeDecision(dilemma: string, context?: string): Promis
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
