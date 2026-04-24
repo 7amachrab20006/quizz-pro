@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { CATEGORIES, Question } from '../lib/data';
+import * as Icons from 'lucide-react';
+import { CATEGORIES, Question, QuizLevel, QuizCategory } from '../lib/data';
 import { db, auth } from '../lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { toPng } from 'html-to-image';
-import { Timer, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Trophy, RefreshCw, BarChart, Sparkles, Lock, Share2, Download, ExternalLink, Gamepad2, Zap } from 'lucide-react';
+import { Timer, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Trophy, RefreshCw, BarChart, Sparkles, Lock, Share2, Download, ExternalLink, Gamepad2, Zap, ArrowLeft } from 'lucide-react';
 import { cn, getRank } from '../lib/utils';
 import { generateQuizQuestions } from '../services/geminiService';
 import { LEVEL_THRESHOLDS, getLevel } from '../lib/constants';
+import { completeLevel, isLevelUnlocked, isDomainUnlocked } from '../lib/progress';
 
 export function Quiz() {
-  const { categoryId } = useParams();
+  const { domainId, levelId } = useParams();
   const navigate = useNavigate();
+  const locationState = useLocation().state as { questions?: Question[], name?: string } | null;
   const { user, userData } = useAuth();
   
-  const category = CATEGORIES.find(c => c.id === categoryId);
+  const [currentDomain, setCurrentDomain] = useState<Partial<QuizCategory> | undefined>(
+    CATEGORIES.find(c => c.id === domainId)
+  );
+  const level = currentDomain?.levels?.find(l => l.id === levelId);
+  
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -36,39 +43,93 @@ export function Quiz() {
 
   useEffect(() => {
     async function initQuiz() {
-      if (!category) return;
-
-      // Security: Check level before starting
-      if (userData && (userData.level || 1) < category.requiredLevel) {
-        setAiError(`Insufficient Level: This domain requires Level ${category.requiredLevel}`);
-        setAiLoading(false);
+      if (domainId === 'custom' && levelId) {
+        setAiLoading(true);
+        try {
+          // If questions passed via state, use them
+          if (locationState?.questions) {
+            setQuestions(locationState.questions);
+            setCurrentDomain({
+              id: 'custom',
+              name: locationState.name || 'Custom Synthesis',
+              difficulty: 'Medium',
+              icon: 'FlaskConical'
+            });
+          } else {
+            // Otherwise fetch from Firestore
+            const quizDoc = await getDoc(doc(db, 'customQuizzes', levelId));
+            if (quizDoc.exists()) {
+              const data = quizDoc.data();
+              setQuestions(data.questions);
+              setCurrentDomain({
+                id: 'custom',
+                name: data.topic || 'Custom Synthesis',
+                difficulty: data.difficulty || 'Medium',
+                icon: 'FlaskConical'
+              });
+            } else {
+              setAiError('Node not found in local archives.');
+            }
+          }
+        } catch (err) {
+          console.error('Error loading custom quiz:', err);
+          setAiError('Failed to retrieve quiz sequence.');
+        } finally {
+          setAiLoading(false);
+        }
         return;
+      }
+
+      if (!currentDomain || !level) return;
+
+      // Security: Check progression locks
+      if (currentDomain.id !== 'custom') {
+        if (!isDomainUnlocked(currentDomain.id!)) {
+          setAiError(`Domain Locked: Complete previous domains first.`);
+          setAiLoading(false);
+          return;
+        }
+
+        if (!level || !isLevelUnlocked(currentDomain.id!, level.id)) {
+          setAiError(`Level Locked: Complete previous levels first.`);
+          setAiLoading(false);
+          return;
+        }
+
+        // Security: Check level before starting
+        if (userData && (userData.level || 1) < (currentDomain.requiredLevel || 0)) {
+          setAiError(`Insufficient Level: This domain requires Level ${currentDomain.requiredLevel}`);
+          setAiLoading(false);
+          return;
+        }
       }
       
       setAiLoading(true);
       setAiError(null);
       
       try {
-        const aiQuestions = await generateQuizQuestions(category.name, category.difficulty);
+        const aiQuestions = await generateQuizQuestions(`${currentDomain.name} - Level ${level?.levelNumber || 1}`, currentDomain.difficulty || 'Medium');
         setQuestions(aiQuestions);
       } catch (err) {
         console.error("AI Generation failed, falling back to static data:", err);
         // Fallback to static if AI fails
-        const shuffled = [...category.questions]
-          .sort(() => Math.random() - 0.5)
-          .slice(0, 10);
-        setQuestions(shuffled);
+        if (level) {
+          const shuffled = [...level.questions]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 10);
+          setQuestions(shuffled);
+        }
       } finally {
         setAiLoading(false);
       }
     }
 
     initQuiz();
-  }, [category]);
+  }, [domainId, levelId]);
 
     const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
     const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
-    const earnedXP = category ? Math.round((xpGains[category.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1))) + (percentage === 100 ? 50 : 0) : 0;
+    const earnedXP = currentDomain ? Math.round((xpGains[currentDomain.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1))) + (percentage === 100 ? 50 : 0) : 0;
 
     // Effect for XP count-up has been moved to top level
     useEffect(() => {
@@ -146,10 +207,17 @@ export function Quiz() {
 
   const finishQuiz = async () => {
     setIsFinished(true);
-    if (user && category) {
+    
+    // Progression Logic: Save level progress if score >= 60%
+    if (currentDomain && level && percentage >= 60 && currentDomain.id !== 'custom') {
+      completeLevel(currentDomain.id!, level.id, score);
+    }
+
+    if (user && currentDomain) {
       const quizResult = {
         userId: user.uid,
-        category: category.name,
+        category: currentDomain.name,
+        level: level?.levelNumber || (currentDomain.id === 'custom' ? 'AI' : 1),
         score,
         total: questions.length,
         timestamp: new Date().toISOString()
@@ -165,11 +233,10 @@ export function Quiz() {
       const userRef = doc(db, 'users', user.uid);
       const newTotal = (userData?.totalQuizzes || 0) + 1;
       const newAvg = ((userData?.avgScore || 0) * (userData?.totalQuizzes || 0) + (score / questions.length)) / newTotal;
-      const percentage = (score / questions.length) * 100;
 
       // XP Calculation
       const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
-      const baseXP = xpGains[category.difficulty as keyof typeof xpGains] || 10;
+      const baseXP = xpGains[currentDomain.difficulty as keyof typeof xpGains] || 10;
       
       // Streak Logic & XP Multiplier
       const isPerfect = percentage === 100;
@@ -201,7 +268,8 @@ export function Quiz() {
         lastScore: `${score}/${questions.length}`,
         lastActivity: new Date().toISOString(),
         lastQuizzes: arrayUnion({
-          category: category.name,
+          category: currentDomain.name,
+          level: level?.levelNumber || (currentDomain.id === 'custom' ? 'AI' : 1),
           score,
           total: questions.length,
           date: new Date().toISOString(),
@@ -212,43 +280,53 @@ export function Quiz() {
     }
   };
 
-  if (!category) return <div>Category not found</div>;
+  if (!currentDomain) return <div>Domain not found</div>;
 
   if (aiLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-12">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-16 py-12 relative overflow-hidden">
+        {/* Background Atmosphere */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-[150px] -z-10"></div>
+        
         <div className="relative">
           <motion.div 
             animate={{ 
               rotate: 360,
-              scale: [1, 1.1, 1],
+              scale: [1, 1.05, 1],
             }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            className="w-32 h-32 border-2 border-primary/20 border-t-primary rounded-full"
+            transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            className="w-48 h-48 border-[1px] border-white/5 border-t-primary rounded-full shadow-[0_0_30px_rgba(212,175,55,0.1)]"
           />
           <motion.div 
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={{ 
+              opacity: [0.2, 0.5, 0.2],
+              scale: [0.95, 1.05, 0.95]
+            }}
+            transition={{ duration: 3, repeat: Infinity }}
             className="absolute inset-0 flex items-center justify-center text-primary"
           >
-            <Sparkles size={48} />
+            <Icons.Cpu size={64} strokeWidth={1} />
           </motion.div>
         </div>
         
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-black tracking-tighter uppercase italic">Synthesizing Domain</h2>
-          <p className="text-text-dim text-sm max-w-xs mx-auto leading-relaxed">
-            Gemini is architecting {category.name} challenges of {category.difficulty} caliber specifically for your session.
+        <div className="text-center space-y-6 max-w-md px-6">
+          <div className="stat-label-dim tracking-[6px] text-primary">Neural Pathfinding</div>
+          <h2 className="text-4xl font-black tracking-tighter uppercase italic">Synthesizing Domain</h2>
+          <p className="text-text-dim text-sm leading-relaxed font-medium">
+            Architecting {currentDomain.name} protocols specifically for your session rank of {getRank(userData?.level || 1)}.
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           {[0, 1, 2].map(i => (
             <motion.div 
               key={i}
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ delay: i * 0.2, duration: 1, repeat: Infinity }}
-              className="w-1.5 h-1.5 bg-primary rounded-full"
+              animate={{ 
+                scale: [1, 1.5, 1],
+                opacity: [0.3, 1, 0.3]
+              }}
+              transition={{ delay: i * 0.2, duration: 1.5, repeat: Infinity }}
+              className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_10px_#D4AF37]"
             />
           ))}
         </div>
@@ -257,36 +335,46 @@ export function Quiz() {
   }
 
   if (questions.length === 0) return (
-    <div className="text-center py-20 bg-red-500/5 border border-red-500/20 rounded-xl max-w-lg mx-auto mt-12">
-      {aiError?.includes('Level') ? <Lock className="mx-auto text-primary mb-4" size={48} /> : <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />}
-      <h3 className="text-xl font-bold">{aiError?.includes('Level') ? 'Access Restricted' : 'Domain Access Failed'}</h3>
-      <p className="text-text-dim text-sm mt-3 px-8 leading-relaxed">
-        {aiError || "The scholarly synthesis could not be completed at this time."}
-      </p>
-      <div className="flex gap-4 justify-center mt-8">
-        <button onClick={() => navigate('/dashboard')} className="btn-minimal">Back to Dashboard</button>
-        {!aiError?.includes('Level') && (
-          <button onClick={() => window.location.reload()} className="btn-minimal-filled">Re-attempt</button>
+    <div className="flex items-center justify-center min-h-[70vh]">
+      <div className="text-center p-16 glass-effect rounded-[2.5rem] max-w-lg mx-auto mt-12 space-y-8">
+        {aiError?.includes('Level') ? (
+          <Icons.Lock className="mx-auto text-primary/40" size={80} strokeWidth={1} />
+        ) : (
+          <Icons.ShieldAlert className="mx-auto text-red-500/40" size={80} strokeWidth={1} />
         )}
+        <div className="space-y-3">
+          <h3 className="text-3xl font-black uppercase italic tracking-tighter">
+            {aiError?.includes('Level') ? 'Access Restricted' : 'Protocol Denied'}
+          </h3>
+          <p className="text-text-dim text-sm px-4 leading-relaxed font-medium opacity-70">
+            {aiError || "The cognitive synthesis could not be completed at this time due to high system load."}
+          </p>
+        </div>
+        <div className="flex gap-4 justify-center">
+          <button onClick={() => navigate('/dashboard')} className="btn-minimal px-10">Return to Base</button>
+          {!aiError?.includes('Level') && (
+            <button onClick={() => window.location.reload()} className="btn-minimal-filled">Retry Synthesis</button>
+          )}
+        </div>
       </div>
     </div>
   );
 
   if (isFinished) {
-    const feedback = percentage === 100 ? "You are a genius 🧠" : 
-                    percentage >= 80 ? "Expert Level! 🏆" :
-                    percentage >= 60 ? "Nice work! 🎓" :
-                    percentage >= 40 ? "Keep studying... 📚" :
-                    "Bro... you need help 😭";
+    const feedback = percentage === 100 ? "ABSOLUTE MASTERY 🧠" : 
+                    percentage >= 80 ? "EXPERT CLEARANCE 🏆" :
+                    percentage >= 60 ? "CRITICAL PASS 🎓" :
+                    percentage >= 40 ? "SUB-OPTIMAL 📚" :
+                    "SYSTEM FAILURE 😭";
 
     const leveledUp = userData?.level && getLevel(userData.xp + earnedXP) > userData.level;
     
     const handleDownload = async () => {
       if (cardRef.current === null) return;
       try {
-        const dataUrl = await toPng(cardRef.current, { cacheBust: true, backgroundColor: '#050505' });
+        const dataUrl = await toPng(cardRef.current, { cacheBust: true, backgroundColor: '#05070A' });
         const link = document.createElement('a');
-        link.download = `quiz-result-${category.id}.png`;
+        link.download = `result-${currentDomain.id}-${level?.levelNumber || 'custom'}.png`;
         link.href = dataUrl;
         link.click();
       } catch (err) {
@@ -295,11 +383,11 @@ export function Quiz() {
     };
 
     const handleShare = async () => {
-      const shareText = `I scored ${score}/${questions.length} on ${category.name} and reached ${getRank(userData?.level || 1)} Rank on QuizMaster Pro! Can you beat me?`;
+      const shareText = `I just reached ${getRank(userData?.level || 1)} status on QuizMaster Pro with a score of ${score}/${questions.length} in ${currentDomain.name}. Join the cognitive elite!`;
       if (navigator.share) {
         try {
           await navigator.share({
-            title: 'QuizMaster Pro Result',
+            title: 'QuizMaster Pro Operative',
             text: shareText,
             url: window.location.origin,
           });
@@ -308,109 +396,124 @@ export function Quiz() {
         }
       } else {
         navigator.clipboard.writeText(shareText + "\n" + window.location.origin);
-        alert("Result copied to clipboard!");
+        alert("Encrypted result copied to clipboard!");
       }
     };
 
+    const isLevelPassed = percentage >= 60;
+
     return (
-      <div className="flex items-center justify-center min-h-[70vh] py-12 px-4">
+      <div className="flex items-center justify-center min-h-[80vh] py-12 px-4 relative overflow-hidden">
+        {/* Confetti Background for perfect score */}
+        {percentage === 100 && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden h-full w-full">
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ y: -10, x: Math.random() * 100 + "%", opacity: 0 }}
+                animate={{ y: "100vh", opacity: [0, 1, 1, 0] }}
+                transition={{ duration: Math.random() * 2 + 2, repeat: Infinity, delay: Math.random() * 5 }}
+                className="absolute w-1 h-1 bg-primary rounded-full blur-[1px]"
+              />
+            ))}
+          </div>
+        )}
+
         <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="max-w-2xl w-full space-y-8"
+          initial={{ scale: 0.95, opacity: 0, y: 30 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="max-w-3xl w-full space-y-10"
         >
-          {/* Main Card */}
-          <div className="clean-card text-center py-12 space-y-10 relative overflow-hidden shadow-[0_0_50px_rgba(212,175,55,0.1)]">
+          {/* Result Card */}
+          <div className="clean-card p-12 text-center space-y-12 relative overflow-hidden backdrop-blur-2xl">
             {leveledUp && (
               <motion.div 
-                initial={{ y: -50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="absolute top-0 left-0 right-0 bg-primary text-bg-dark py-2 text-[10px] font-black uppercase tracking-[5px]"
+                initial={{ y: -100 }}
+                animate={{ y: 0 }}
+                className="absolute top-0 left-0 right-0 bg-primary text-bg-dark py-3 text-[10px] font-black uppercase tracking-[8px] z-20"
               >
-                🎉 LEVEL UP ACHIEVED!
+                PROMOTED TO NEXT TIER
               </motion.div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <motion.div 
-                animate={{ rotate: [0, -10, 10, 0] }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20 shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', damping: 10, stiffness: 100, delay: 0.2 }}
+                className={cn(
+                  "w-32 h-32 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border-2 shadow-2xl relative",
+                  isLevelPassed ? "bg-primary/10 border-primary/20 text-primary" : "bg-red-500/10 border-red-500/20 text-red-500"
+                )}
               >
-                <Trophy className="text-primary" size={48} />
+                {isLevelPassed ? <Icons.Trophy size={64} strokeWidth={1} /> : <Icons.Target size={64} strokeWidth={1} />}
+                <div className="absolute -bottom-2 -right-2 bg-bg-dark border border-white/10 rounded-xl px-3 py-1 font-black text-xs italic tracking-tighter">
+                  {percentage}%
+                </div>
               </motion.div>
-              <h2 className="text-5xl font-black mb-2 tracking-tighter italic uppercase">Domain Conquered</h2>
-              <p className="text-text-dim font-bold uppercase tracking-[3px] text-xs underline decoration-primary decoration-2 underline-offset-8">{feedback}</p>
+              <h2 className={cn("text-6xl font-black mb-2 tracking-tighter uppercase italic leading-none", isLevelPassed ? "text-white" : "text-red-500")}>
+                {isLevelPassed ? "Protocol Cleared" : "Protocol Failed"}
+              </h2>
+              <div className="text-primary font-black uppercase tracking-[6px] text-xs pb-1 border-b border-primary/20 inline-block">{feedback}</div>
             </div>
             
-            {/* Stats Card (The Shareable Part) */}
-            <div ref={cardRef} className="bg-bg-dark/50 border border-white/5 rounded-2xl p-8 mx-4 md:mx-12 space-y-8 relative">
-               {/* Branding for share */}
-               <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-20 pointer-events-none">
-                  <span className="text-[8px] font-black tracking-[8px] uppercase">QuizMaster Pro</span>
-               </div>
-               
+            {/* Stats Dashboard */}
+            <div ref={cardRef} className="bg-bg-dark/40 border border-white/5 rounded-[2rem] p-10 space-y-10 relative">
                <div className="flex justify-between items-center text-left">
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-text-dim mb-1">Knowledge Rank</div>
-                    <div className="text-2xl font-black text-primary italic uppercase">{getRank(userData?.level || 1)}</div>
+                    <div className="stat-label-dim mb-2">Operative Rank</div>
+                    <div className="text-3xl font-black text-primary italic uppercase tracking-tighter">{getRank(userData?.level || 1)}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-text-dim mb-1">Category</div>
-                    <div className="text-xl font-bold">{category.name}</div>
+                    <div className="stat-label-dim mb-2">Sequence</div>
+                    <div className="text-xl font-bold tracking-tight uppercase">{currentDomain.name} • NODE {level?.levelNumber || 'AI'}</div>
                   </div>
                </div>
 
-               <div className="grid grid-cols-3 gap-4 py-6 border-y border-white/5">
-                <div className="space-y-1">
-                  <div className="stat-value-gold text-3xl font-black italic">{Math.round(percentage)}%</div>
-                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">Accuracy</div>
+               <div className="grid grid-cols-3 gap-8 py-10 border-y border-white/5">
+                <div className="space-y-2">
+                  <div className="stat-value-gold text-4xl">{score}</div>
+                  <div className="stat-label-dim !text-[9px]">Verified Correct</div>
                 </div>
-                <div className="border-x border-white/10 space-y-1">
-                  <div className="stat-value-gold text-3xl font-black italic">{score}/{questions.length}</div>
-                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">Points</div>
+                <div className="border-x border-white/10 space-y-2">
+                  <div className="stat-value-gold text-4xl">{questions.length - score}</div>
+                  <div className="stat-label-dim !text-[9px]">Errors Found</div>
                 </div>
-                <div className="space-y-1">
-                  <div className="stat-value-gold text-3xl font-black italic">+{displayedXP}</div>
-                  <div className="stat-label-dim !text-[8px] uppercase tracking-widest">XP Gained</div>
+                <div className="space-y-2">
+                  <div className="stat-value-gold text-4xl">+{displayedXP}</div>
+                  <div className="stat-label-dim !text-[9px]">XP Accrued</div>
                 </div>
                </div>
 
                {percentage === 100 && (
-                 <div className="flex items-center justify-center gap-2 text-[10px] font-black text-green-400 uppercase tracking-widest animate-pulse">
-                    <Sparkles size={14} /> Perfect Score Bonus: +50 XP
+                 <div className="flex items-center justify-center gap-3 text-[10px] font-black text-green-400 uppercase tracking-widest bg-green-500/5 py-3 rounded-xl border border-green-500/10">
+                    <Icons.Sparkles size={16} /> Perfect Execution Bonus Applied (+50 XP)
                  </div>
                )}
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 px-12">
-              <button 
-                onClick={handleShare}
-                className="btn-minimal flex-1 gap-2 py-4"
-              >
-                <Share2 size={18} /> Share Result
+            <div className="flex flex-col md:flex-row gap-6 pt-4">
+              <button onClick={handleShare} className="btn-minimal flex-1 gap-3 py-5 rounded-2xl group">
+                <Icons.Share2 size={20} className="group-hover:rotate-12 transition-transform" /> ENCRYPT & SHARE
               </button>
-              <button 
-                onClick={handleDownload}
-                className="btn-minimal flex-1 gap-2 py-4"
-              >
-                <Download size={18} /> Save Summary
+              <button onClick={handleDownload} className="btn-minimal flex-1 gap-3 py-5 rounded-2xl group text-white/50">
+                <Icons.Download size={20} className="group-hover:translate-y-1 transition-transform" /> SAVE INTEL
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 px-4">
+          <div className="flex flex-col md:flex-row gap-6 px-4">
             <button 
               onClick={() => window.location.reload()}
-              className="btn-minimal-filled flex-1 py-4 uppercase font-black italic tracking-tighter"
+              className="btn-minimal-filled flex-1 py-6 rounded-2xl text-xl"
             >
-              <RefreshCw size={18} className="mr-2" /> Play Again
+              <Icons.RefreshCw size={24} className="mr-3" /> RE-ENTER SEQUENCE
             </button>
             <Link 
-              to="/leaderboard"
-              className="btn-minimal flex-1 py-4 uppercase font-black italic tracking-tighter text-center flex items-center justify-center"
+              to={currentDomain.id === 'custom' ? '/ai-lab' : `/quiz/${currentDomain.id}/levels`}
+              className="btn-minimal flex-1 py-6 rounded-2xl text-lg uppercase font-black italic tracking-tighter text-center flex items-center justify-center"
             >
-              <BarChart size={18} className="mr-2" /> Global Ranks
+              <Icons.ArrowLeft size={20} className="mr-3" /> LEVEL OVERVIEW
             </Link>
           </div>
         </motion.div>
@@ -420,59 +523,69 @@ export function Quiz() {
 
   if (!gameStarted && questions.length > 0) {
     return (
-      <div className="flex items-center justify-center min-h-[70vh] py-12 px-4">
+      <div className="flex items-center justify-center min-h-[80vh] py-12 px-4 relative">
         <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="clean-card max-w-xl w-full p-12 text-center space-y-10"
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="clean-card max-w-2xl w-full p-16 text-center space-y-12 relative overflow-hidden"
         >
-          <div className="space-y-4">
-             <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto border border-primary/20">
-               <Gamepad2 className="text-primary" size={40} />
-             </div>
-             <h2 className="text-4xl font-black uppercase italic tracking-tighter">Prepare For Battle</h2>
-             <p className="text-text-dim text-sm px-8">You are about to enter the <span className="text-white font-bold">{category.name}</span> domain. High accuracy awards massive XP.</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-left p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-[10px] font-black text-text-dim uppercase mb-1">Domain</div>
-              <div className="font-bold text-sm tracking-tight">{category.name}</div>
-            </div>
-            <div className="text-left p-4 rounded-xl bg-white/5 border border-white/5">
-              <div className="text-[10px] font-black text-text-dim uppercase mb-1">Difficulty</div>
-              <div className="font-bold text-sm tracking-tight text-primary uppercase">{category.difficulty}</div>
-            </div>
-          </div>
+          {/* Decorative Corner */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 -mr-12 -mt-12 rotate-45 border-l border-white/10"></div>
 
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-               <div className="flex items-center gap-3">
-                 <Timer size={20} className="text-primary" />
+             <div className="w-24 h-24 bg-primary/5 rounded-[2.5rem] flex items-center justify-center mx-auto border border-white/10 shadow-inner">
+               <Icons.Gamepad2 className="text-primary" size={48} strokeWidth={1.5} />
+             </div>
+             <div className="space-y-3">
+               <h2 className="text-5xl font-black uppercase italic tracking-tighter">Sequence Ready</h2>
+               <p className="text-text-dim text-sm px-10 leading-relaxed font-medium">
+                 Preparing <span className="text-white font-bold">{currentDomain.name} {level ? `Phase ${level.levelNumber}` : 'AI Mode'}</span>. 
+                 <br />Minimum 60% accuracy required for node advancement.
+               </p>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 pb-2 border-b border-white/5">
+            <div className="text-left py-4">
+              <div className="stat-label-dim mb-1">Target Domain</div>
+              <div className="font-black text-xl tracking-tighter uppercase italic">{currentDomain.name}</div>
+            </div>
+            <div className="text-right py-4">
+              <div className="stat-label-dim mb-1">Complexity</div>
+              <div className="font-black text-xl tracking-tighter uppercase italic text-primary">{currentDomain.difficulty}</div>
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            <div className="flex items-center justify-between p-6 rounded-3xl bg-white/[0.03] border border-white/5">
+               <div className="flex items-center gap-4">
+                 <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+                    <Icons.Timer size={24} />
+                 </div>
                  <div className="text-left">
-                    <div className="font-bold text-sm">Timer Mode</div>
-                    <div className="text-[10px] text-text-dim">30s pressure per question</div>
+                    <div className="font-black text-sm uppercase tracking-tight">Temporal Pressure</div>
+                    <div className="text-[10px] text-text-dim font-black uppercase tracking-widest">30s PER NODE</div>
                  </div>
                </div>
                <button 
                  onClick={() => setTimerEnabled(!timerEnabled)}
                  className={cn(
-                   "w-12 h-6 rounded-full transition-colors relative",
+                   "w-14 h-7 rounded-full transition-all relative p-1",
                    timerEnabled ? "bg-primary" : "bg-white/10"
                  )}
                >
                  <motion.div 
-                   animate={{ x: timerEnabled ? 24 : 2 }}
-                   className="w-5 h-5 bg-bg-dark rounded-full absolute top-0.5" 
+                   animate={{ x: timerEnabled ? 28 : 0 }}
+                   className="w-5 h-5 bg-bg-dark rounded-full shadow-lg" 
                  />
                </button>
             </div>
 
             <button 
               onClick={() => setGameStarted(true)}
-              className="btn-minimal-filled w-full text-xl py-6 rounded-xl shadow-[0_0_30px_rgba(212,175,55,0.3)] group"
+              className="btn-minimal-filled w-full text-2xl py-8 rounded-[2.5rem] group"
             >
-              INITIATE CHALLENGE <Zap size={20} className="ml-2 group-hover:scale-125 transition-transform" />
+              INITIATE PROTOCOL <Icons.Zap size={24} className="ml-3 group-hover:scale-125 transition-transform" />
             </button>
           </div>
         </motion.div>
@@ -483,63 +596,65 @@ export function Quiz() {
   const currentQ = questions[currentIdx];
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-2">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
-            <BarChart className="text-primary" size={24} />
+    <div className="max-w-5xl mx-auto py-12 px-4 space-y-12">
+      {/* HUD Header */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 px-4 border-b border-white/5 pb-10">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 bg-primary/5 rounded-[1.5rem] flex items-center justify-center border border-primary/20 shadow-inner">
+            <Icons.Code className="text-primary" size={32} strokeWidth={1.5} />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">{category.name}</h2>
-            <div className="flex items-center gap-3">
-              <span className="stat-label-dim">Question {currentIdx + 1} of {questions.length}</span>
-              <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-              <span className="text-[10px] font-black uppercase text-text-dim tracking-wider">{category.difficulty}</span>
-              <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-                <Sparkles size={8} className="text-primary" />
-                <span className="text-[8px] font-black uppercase text-primary tracking-[1px]">Dynamic AI</span>
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">{currentDomain.name} <span className="text-primary">{level ? `L${level.levelNumber}` : 'AI'}</span></h2>
+            <div className="flex items-center gap-4">
+              <div className="stat-label-dim tracking-[3px]">Node {currentIdx + 1} of {questions.length}</div>
+              <div className="w-1 h-1 bg-white/20 rounded-full"></div>
+              <div className="flex items-center gap-2">
+                <Icons.Activity size={12} className="text-primary" />
+                <span className="text-[9px] font-black uppercase text-white tracking-[2px]">{getRank(userData?.level || 1)} RANK</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
            <div className={cn(
-             "flex items-center gap-2 px-5 py-2.5 rounded-lg border transition-all duration-300",
-             timeLeft <= 10 ? "border-red-500/50 text-red-500 bg-red-500/5" : "border-border-dim bg-card-bg/50 text-text-dim"
+             "h-16 flex flex-col items-center justify-center px-10 rounded-[1.5rem] border transition-all duration-500",
+             timeLeft <= 10 ? "border-red-500 bg-red-500/10 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)] animate-pulse" : "border-white/10 bg-white/5 text-white/50"
            )}>
-              <Timer size={18} />
-              <span className="font-mono text-xl font-bold leading-none">{timeLeft}</span>
+              <span className="text-[8px] font-black uppercase tracking-[4px] mb-1">Time Remain</span>
+              <span className="font-mono text-3xl font-black leading-none">{timeLeft}S</span>
            </div>
         </div>
       </div>
 
-      {/* Progress Bar - Minimal */}
-      <div className="progress-rail h-1.5">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
-          className="progress-bar-fill shadow-[0_0_10px_rgba(212,175,55,0.4)]"
-        />
+      {/* Progress Bar - Dramatic */}
+      <div className="relative px-4">
+        <div className="progress-rail h-2">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
+            className="progress-bar-fill"
+          />
+        </div>
       </div>
 
-      {/* Question Card - Clean Minimalism */}
+      {/* Question Interface */}
       <AnimatePresence mode="wait">
         <motion.div 
           key={currentIdx}
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -20, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="clean-card p-12 space-y-12"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -20, opacity: 0 }}
+          className="space-y-12 py-10"
         >
-          <h3 className="text-3xl font-light leading-snug tracking-tight">
-            {currentQ.text}
-          </h3>
+          <div className="text-center space-y-4 max-w-4xl mx-auto">
+            <div className="stat-label-dim text-primary opacity-60">Objective Identification</div>
+            <h3 className="text-4xl md:text-5xl font-black leading-[1.1] tracking-tighter uppercase italic">
+              {currentQ.text}
+            </h3>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {currentQ.options.map((opt, i) => {
               const outcome = isLocked ? (
                 i === currentQ.correctAnswer ? 'correct' : (selectedAnswer === i ? 'wrong' : null)
@@ -551,17 +666,25 @@ export function Quiz() {
                   disabled={isLocked}
                   onClick={() => handleAnswer(i)}
                   className={cn(
-                    "group relative w-full text-left p-6 rounded-xl border transition-all duration-200 flex items-center justify-between",
-                    !isLocked && "border-border-dim bg-bg-dark/50 hover:border-primary hover:bg-primary/5",
-                    outcome === 'correct' && "border-green-500/50 bg-green-500/5 text-green-400",
-                    outcome === 'wrong' && "border-red-500/50 bg-red-500/5 text-red-400",
-                    isLocked && outcome === null && "opacity-30 grayscale"
+                    "group relative w-full text-left p-10 rounded-[2rem] border-2 transition-all duration-300 flex items-center justify-between",
+                    !isLocked && "border-white/5 bg-white/[0.02] hover:border-primary/50 hover:bg-primary/5 hover:-translate-y-1",
+                    outcome === 'correct' && "border-green-500 bg-green-500/10 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]",
+                    outcome === 'wrong' && "border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]",
+                    isLocked && outcome === null && "opacity-20 grayscale scale-[0.98]"
                   )}
                 >
-                  <span className="text-lg font-medium tracking-tight">{opt}</span>
-                  <div className="flex items-center gap-2">
-                    {outcome === 'correct' && <CheckCircle2 size={24} className="text-green-500" />}
-                    {outcome === 'wrong' && <XCircle size={24} className="text-red-500" />}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-text-dim uppercase tracking-widest block mb-2 opacity-50">Option 0{i + 1}</span>
+                    <span className="text-lg font-black tracking-tight uppercase italic">{opt}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {outcome === 'correct' && <Icons.CheckCircle2 size={32} strokeWidth={2.5} />}
+                    {outcome === 'wrong' && <Icons.XCircle size={32} strokeWidth={2.5} />}
+                    {!isLocked && (
+                      <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/10 group-hover:border-primary group-hover:text-primary transition-colors">
+                        <Icons.ArrowRight size={16} />
+                      </div>
+                    )}
                   </div>
                 </button>
               );
@@ -570,12 +693,19 @@ export function Quiz() {
         </motion.div>
       </AnimatePresence>
 
-      <div className="flex justify-center border-t border-white/5 pt-8">
-        {timeLeft <= 5 && !isLocked && (
-          <div className="flex items-center gap-2 text-red-500/50 text-[10px] font-black uppercase tracking-[2px] animate-pulse">
-            <AlertTriangle size={14} /> Critical: Time Depleting
-          </div>
-        )}
+      <div className="flex justify-center pt-8 border-t border-white/5 px-4 h-24">
+        <AnimatePresence>
+          {timeLeft <= 5 && !isLocked && (
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="flex items-center gap-3 text-red-500 bg-red-500/10 px-8 py-3 rounded-full border border-red-500/20 text-[10px] font-black uppercase tracking-[4px]"
+            >
+              <Icons.AlertOctagon size={16} /> SYSTem Critical: Temporal Drain
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

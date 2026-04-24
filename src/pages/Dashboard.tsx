@@ -6,6 +6,7 @@ import { CATEGORIES } from '../lib/data';
 import * as Icons from 'lucide-react';
 import { formatDate, cn, getRank } from '../lib/utils';
 import { LEVEL_THRESHOLDS } from '../lib/constants';
+import { isDomainUnlocked, getCompletedLevelsCount } from '../lib/progress';
 
 export function Dashboard() {
   const { user, userData, loading } = useAuth();
@@ -34,129 +35,200 @@ export function Dashboard() {
   const progress = ((currentXP - prevXP) / (nextXP - prevXP)) * 100;
 
   return (
-    <div className="space-y-12 h-full flex flex-col pb-12">
+    <div className="space-y-12 h-full flex flex-col pb-12 relative">
       {/* Header Area */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border-dim pb-8 gap-6">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/5 pb-10 gap-8 relative">
+        <div className="absolute -bottom-[1px] left-0 w-32 h-[1px] bg-primary shadow-[0_0_10px_#D4AF37]"></div>
+        
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="flex items-center gap-6"
+          className="flex items-center gap-8"
         >
-          <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-bg-dark border border-border-dim overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.1)]">
-              {userData.photoURL ? (
-                <img src={userData.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-primary/5">
-                  <Icons.User size={32} className="text-primary opacity-40" />
-                </div>
-              )}
+          <div className="relative group">
+            <div className="w-24 h-24 rounded-3xl bg-card-bg/80 border border-white/10 p-1 shadow-card group-hover:border-primary/50 transition-all duration-500 overflow-hidden">
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-bg-dark flex items-center justify-center">
+                {userData.photoURL ? (
+                  <img src={userData.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <Icons.User size={40} className="text-primary/30" />
+                )}
+              </div>
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-primary text-bg-dark text-[10px] font-black w-8 h-8 rounded-lg flex items-center justify-center border-4 border-bg-dark shadow-xl">
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: 0.3 }}
+              className="absolute -bottom-3 -right-3 bg-primary text-bg-dark text-[10px] font-black w-10 h-10 rounded-2xl flex items-center justify-center border-4 border-bg-dark shadow-[0_4px_20px_rgba(0,0,0,0.5)]"
+            >
               L{currentLevel}
-            </div>
+            </motion.div>
           </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-light tracking-tight">Welcome back, <span className="font-bold underline decoration-primary decoration-4 underline-offset-8">{userData.username}.</span></h1>
-            <p className="text-text-dim text-sm">Level {currentLevel} Scholar • {currentXP} Total XP</p>
+          <div className="space-y-2">
+            <h1 className="text-5xl font-black tracking-tighter uppercase italic">
+              Scholar <span className="text-primary">{userData.username}.</span>
+            </h1>
+            <div className="flex items-center gap-4">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className={cn("w-1.5 h-1.5 rounded-full", i <= currentLevel % 5 + 1 ? "bg-primary" : "bg-white/10")} />
+                ))}
+              </div>
+              <p className="text-text-dim text-[10px] uppercase font-black tracking-[2px]">{getRank(currentLevel)} Class</p>
+            </div>
           </div>
         </motion.div>
         
-        <div className="text-right w-full md:w-64 space-y-2">
-           <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-text-dim mb-1">
-              <span>Progress to L{currentLevel + 1}</span>
-              <span className="text-primary">{currentXP - prevXP} / {nextXP - prevXP} XP</span>
+        <div className="text-right w-full md:w-80 space-y-4">
+           <div className="flex justify-between items-end mb-1">
+              <div className="text-left">
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-dim block mb-1">XP Advancement</span>
+                <span className="text-xs font-bold text-white tracking-widest">{currentXP} <span className="text-text-dim font-medium">Accumulated</span></span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary block mb-1">L{currentLevel + 1} Target</span>
+                <span className="text-xs font-bold text-white tracking-widest">{nextXP - currentXP} <span className="text-text-dim font-medium">Remain</span></span>
+              </div>
            </div>
            <div className="progress-rail h-2">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                className="progress-bar-fill shadow-[0_0_10px_rgba(212,175,55,0.3)] transition-all" 
+                className="progress-bar-fill" 
               />
            </div>
-           {currentLevel < 5 && (
-             <div className="text-[9px] text-text-dim/60 italic">Next unlock available at Level {currentLevel + Math.max(1, (CATEGORIES.find(c => c.requiredLevel > currentLevel)?.requiredLevel || currentLevel) - currentLevel)}</div>
-           )}
         </div>
       </header>
 
       {/* Stats Strip */}
-      <section className="stats-strip grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="clean-card bg-card-bg/50">
-          <span className="stat-label-dim block mb-2">Overall Accuracy</span>
-          <span className="stat-value-gold text-3xl">{Math.round((userData.avgScore || 0) * 100)}%</span>
-        </div>
-        <div className="clean-card bg-card-bg/50">
-          <span className="stat-label-dim block mb-2">Active Streak</span>
-          <div className="flex items-center gap-2">
-            <span className="stat-value-gold text-3xl">{userData.streak || 0}</span>
-            {(userData.streak || 0) > 0 && (
-              <span className="text-[10px] font-black px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded border border-orange-500/20">
-                {Math.round((1 + (Math.min(userData.streak, 10) * 0.1)) * 10) / 10}x XP
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="clean-card bg-card-bg/50">
-          <span className="stat-label-dim block mb-2">Knowledge Rank</span>
-          <span className="stat-value-gold text-3xl">{getRank(userData.level || 1)}</span>
-        </div>
+      <section className="stats-strip grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[
+          { label: 'Avg Accuracy', value: `${Math.round((userData.avgScore || 0) * 100)}%`, icon: 'Target' },
+          { label: 'Active Streak', value: userData.streak || 0, icon: 'Flame', subValue: userData.streak > 0 ? `${Math.round((1 + (Math.min(userData.streak, 10) * 0.1)) * 10) / 10}x XP` : null },
+          { label: 'Knowledge Rank', value: getRank(currentLevel), icon: 'Medal' },
+          { label: 'Total Quizzes', value: userData.totalQuizzes || 0, icon: 'Layout' }
+        ].map((stat, i) => {
+          const Icon = (Icons as any)[stat.icon];
+          return (
+            <motion.div 
+              key={stat.label}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: i * 0.1 }}
+              className="clean-card flex items-center justify-between group"
+            >
+              <div>
+                <span className="stat-label-dim block mb-2">{stat.label}</span>
+                <div className="flex items-center gap-3">
+                  <span className="stat-value-gold text-2xl">{stat.value}</span>
+                  {stat.subValue && (
+                    <span className="text-[8px] font-black px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded uppercase">
+                      {stat.subValue}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="p-3 bg-white/5 rounded-xl text-white/20 group-hover:text-primary transition-colors">
+                <Icon size={20} />
+              </div>
+            </motion.div>
+          );
+        })}
       </section>
 
       {/* Main Grid Area */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 flex-1">
-        {CATEGORIES.map((cat) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {CATEGORIES.map((cat, i) => {
            const Icon = (Icons as any)[cat.icon];
-           const isLocked = currentLevel < cat.requiredLevel;
+           const isLocked = !isDomainUnlocked(cat.id);
+           const completedCount = getCompletedLevelsCount(cat.id);
+           const totalLevels = cat.levels.length;
+           const progressPercent = (completedCount / totalLevels) * 100;
            
            return (
-             <div key={cat.id} className="relative h-full">
+             <motion.div 
+               key={cat.id}
+               initial={{ opacity: 0, scale: 0.95 }}
+               animate={{ opacity: 1, scale: 1 }}
+               transition={{ delay: 0.2 + (i * 0.05) }}
+               className="relative group"
+             >
                <Link 
-                  to={isLocked ? '#' : `/quiz/${cat.id}`} 
+                  to={isLocked ? '#' : `/quiz/${cat.id}/levels`} 
                   className={cn(
-                    "clean-card flex flex-col justify-between h-full group h-full transition-all duration-300",
-                    isLocked ? "bg-white/[0.02] border-white/5 opacity-50 cursor-not-allowed grayscale" : "hover:scale-[1.02] active:scale-[0.98]"
+                    "clean-card flex flex-col justify-between h-full relative overflow-hidden transition-all duration-500",
+                    isLocked ? "opacity-40 grayscale pointer-events-none" : "hover:-translate-y-2"
                   )}
                >
-                  <div className="space-y-4">
+                  {/* Subtle Background Icon */}
+                  <div className="absolute -top-4 -right-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+                    <Icon size={120} strokeWidth={1} />
+                  </div>
+
+                  <div className="space-y-6 relative z-10">
                     <div className="flex justify-between items-start">
-                      <div className={cn(
-                        "text-2xl transition-transform origin-left",
-                        !isLocked && "group-hover:scale-110"
-                      )}>
-                        <Icon size={32} strokeWidth={1.5} className={isLocked ? "text-text-dim" : "text-primary"} />
+                      <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-bg-dark transition-all duration-300">
+                        {isLocked ? <Icons.Lock size={24} /> : <Icon size={24} />}
                       </div>
-                      {isLocked && <Icons.Lock size={18} className="text-text-dim/40" />}
+                      {!isLocked && completedCount === totalLevels && (
+                        <div className="bg-green-500/10 p-1.5 rounded-lg border border-green-500/20 text-green-500">
+                           <Icons.CheckCircle2 size={16} />
+                        </div>
+                      )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg leading-tight mb-1">{cat.name}</h3>
-                      <p className="text-[10px] text-text-dim uppercase tracking-[1px] font-black">{cat.difficulty}</p>
+                      <h3 className="font-black text-xl uppercase italic tracking-tighter leading-tight mb-2 group-hover:text-primary transition-colors">{cat.name}</h3>
+                      <p className="text-[10px] text-text-dim uppercase tracking-[2px] font-black">{cat.difficulty} PROTOCOL</p>
                     </div>
                   </div>
 
-                  <div className="mt-8 space-y-4">
-                    {isLocked ? (
-                      <div className="w-full py-2 px-4 rounded bg-white/5 border border-white/5 text-center">
-                        <span className="text-[10px] font-black uppercase text-text-dim tracking-wider">Unlock at Level {cat.requiredLevel}</span>
-                      </div>
-                    ) : (
-                      <button className="btn-minimal w-full">Enter Domain</button>
-                    )}
+                  <div className="mt-12 space-y-6 relative z-10">
+                    <div className="space-y-3">
+                       <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-text-dim">
+                          <span>Advancement</span>
+                          <span className="text-white">{completedCount}/{totalLevels} Nodes</span>
+                       </div>
+                       <div className="progress-rail h-1.5">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressPercent}%` }}
+                            className="progress-bar-fill"
+                          />
+                       </div>
+                    </div>
+
+                    <div className="btn-minimal w-full font-black text-[9px]">
+                      {isLocked ? 'Locked Domain' : 'Enter Sequence'}
+                    </div>
                   </div>
                </Link>
-             </div>
+             </motion.div>
            );
         })}
       </div>
-
-      {/* Recent Activity Footnote */}
-      <footer className="bg-white/5 border border-white/5 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-sm">
-          Last Attempt: <strong className="text-primary">{userData.lastQuizzes?.[0]?.category || 'None'}</strong>
+ 
+       {/* Activity Summary */}
+      <footer className="mt-12 p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-10">
+        <div className="flex items-center gap-6">
+          <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 text-primary">
+            <Icons.Calendar size={24} />
+          </div>
+          <div>
+            <div className="text-[10px] uppercase font-black tracking-[2px] text-text-dim mb-1">Last Operational Cycle</div>
+            <div className="font-black text-xl uppercase tracking-tighter italic">
+              {userData.lastQuizzes?.[0]?.category || 'Zero Data Found'}
+            </div>
+          </div>
         </div>
-        <div className="flex gap-8 items-center">
-          <div className="text-xs uppercase tracking-widest text-text-dim">Score: <span className="text-green-400 font-bold">{userData.lastScore || 'N/A'}</span></div>
-          <div className="text-[10px] font-black px-2 py-0.5 border border-red-500/50 text-red-500 rounded uppercase tracking-tighter">Verified Result</div>
+        <div className="flex flex-wrap justify-center gap-12">
+          <div className="text-center">
+            <div className="text-[10px] uppercase font-black tracking-[2px] text-text-dim mb-1">Result</div>
+            <div className="text-2xl font-black text-green-400 italic italic tracking-tighter">{userData.lastScore || '---'}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[10px] uppercase font-black tracking-[2px] text-text-dim mb-1">Timestamp</div>
+            <div className="text-2xl font-black text-white italic tracking-tighter uppercase">{userData.lastQuizzes?.[0]?.date ? formatDate(userData.lastQuizzes[0].date) : 'N/A'}</div>
+          </div>
         </div>
       </footer>
     </div>

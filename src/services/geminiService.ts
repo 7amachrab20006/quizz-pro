@@ -6,14 +6,17 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Attempt to retrieve the key from environment or global window
+    const apiKey = process.env.GEMINI_API_KEY || (window as any).GEMINI_API_KEY;
     
     if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
-      throw new Error(
-        "CRITICAL: GEMINI_API_KEY is not configured. " +
-        "Please go to Application Settings -> API Keys and add a new Custom Variable 'GEMINI_API_KEY' with your key from Google AI Studio. " +
-        "Then restart the application to apply changes."
-      );
+      const isExternal = window.location.hostname.includes('vercel.app') || !window.location.hostname.includes('google.run.app');
+      
+      const errorMessage = isExternal 
+        ? "CRITICAL: GEMINI_API_KEY missing. Please add this as an Environment Variable in your Vercel (or hosting) dashboard, then redeploy."
+        : "CRITICAL: GEMINI_API_KEY missing. Go to Settings -> Secrets/API Keys -> Custom Variables and add GEMINI_API_KEY with your key from Google AI Studio.";
+
+      throw new Error(errorMessage);
     }
     aiInstance = new GoogleGenAI({ apiKey });
   }
@@ -29,7 +32,7 @@ export async function generateQuizQuestions(categoryName: string, difficulty: st
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -92,7 +95,7 @@ export async function analyzeDecision(dilemma: string, context?: string): Promis
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
