@@ -206,6 +206,36 @@ export function Dashboard() {
            );
         })}
       </div>
+
+      {/* Special Advisor Section */}
+      <section className="mt-12">
+        <div className="flex items-center gap-4 mb-8">
+           <div className="h-px bg-white/10 flex-1"></div>
+           <div className="text-[10px] font-black uppercase tracking-[5px] text-primary/60">Auxiliary Protocols</div>
+           <div className="h-px bg-white/10 flex-1"></div>
+        </div>
+        
+        <Link to="/simulator" className="clean-card group flex flex-col md:flex-row items-center justify-between gap-10 hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-[200px] -mr-32 -mt-32 blur-3xl group-hover:bg-primary/10 transition-all"></div>
+          
+          <div className="flex items-center gap-8 relative z-10">
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-bg-dark transition-all duration-500 shadow-[0_0_20px_rgba(212,175,55,0.1)]">
+              <Icons.BrainCircuit size={40} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-3xl font-black uppercase italic tracking-tighter">AI Decision Advisor</h3>
+              <p className="text-text-dim max-w-md text-sm leading-relaxed">
+                Utilize high-level cognitive synthesis to evaluate real-world dilemmas through multiple layers of logic.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-end gap-3 relative z-10 w-full md:w-auto">
+            <div className="btn-minimal px-10 group-hover:bg-primary group-hover:text-bg-dark transition-colors">Launch Module</div>
+            <div className="text-[8px] font-black uppercase tracking-[3px] text-text-dim text-right pr-2">Neural Engine V4.0</div>
+          </div>
+        </Link>
+      </section>
  
        {/* Activity Summary */}
       <footer className="mt-12 p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-10">

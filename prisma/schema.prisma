@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  xp        Int        @default(0)
+  level     Int        @default(1)
+  createdAt DateTime   @default(now())
+  progress  Progress[]
+}
+
+model Category {
+  id     String  @id
+  name   String
+  order  Int     @default(0)
+  levels Level[]
+}
+
+model Level {
+  id          String     @id @default(uuid())
+  categoryId  String
+  category    Category   @relation(fields: [categoryId], references: [id])
+  levelNumber Int
+  isLocked    Boolean    @default(true)
+  quizzes     Quiz[]
+  progress    Progress[]
+
+  @@unique([categoryId, levelNumber])
+}
+
+model Quiz {
+  id            String @id @default(uuid())
+  levelId       String
+  level         Level  @relation(fields: [levelId], references: [id])
+  question      String
+  choices       String // Store as JSON string or comma-separated if using SQLite, or use Json type if using Postgres
+  correctAnswer String
+}
+
+model Progress {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  levelId   String
+  level     Level    @relation(fields: [levelId], references: [id])
+  score     Int
+  total     Int
+  completed Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, levelId])
+}

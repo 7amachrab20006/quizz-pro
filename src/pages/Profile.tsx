@@ -42,9 +42,13 @@ export function Profile() {
         } else {
           setTargetError("Subject profile not found in archival records.");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching target profile:", err);
-        setTargetError("Failed to synchronize with target profile.");
+        if (err.message?.includes('permission')) {
+          setTargetError("Access Denied: You do not have permission to view this profile. Please ensure you are authenticated.");
+        } else {
+          setTargetError("Failed to synchronize with target profile.");
+        }
       } finally {
         setTargetLoading(false);
       }

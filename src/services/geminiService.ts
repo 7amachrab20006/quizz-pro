@@ -6,17 +6,10 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    // Attempt to retrieve the key from environment or global window
-    const apiKey = process.env.GEMINI_API_KEY || (window as any).GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     
-    if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
-      const isExternal = window.location.hostname.includes('vercel.app') || !window.location.hostname.includes('google.run.app');
-      
-      const errorMessage = isExternal 
-        ? "CRITICAL: GEMINI_API_KEY missing. Please add this as an Environment Variable in your Vercel (or hosting) dashboard, then redeploy."
-        : "CRITICAL: GEMINI_API_KEY missing. Go to Settings -> Secrets/API Keys -> Custom Variables and add GEMINI_API_KEY with your key from Google AI Studio.";
-
-      throw new Error(errorMessage);
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in your environment variables.");
     }
     aiInstance = new GoogleGenAI({ apiKey });
   }
@@ -61,7 +54,17 @@ export async function generateQuizQuestions(categoryName: string, difficulty: st
 
     const text = response.text;
     if (!text) throw new Error("No data received from Gemini");
-    return JSON.parse(text);
+    
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+      if (parsed.data && Array.isArray(parsed.data)) return parsed.data;
+      throw new Error("Gemini response is not a valid question array");
+    } catch (e) {
+      console.error("Failed to parse Gemini response as array:", text);
+      throw e;
+    }
   } catch (error) {
     console.error("Gemini Generation Error:", error);
     throw error;

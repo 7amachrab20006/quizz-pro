@@ -19,10 +19,10 @@ export function Quiz() {
   const locationState = useLocation().state as { questions?: Question[], name?: string } | null;
   const { user, userData } = useAuth();
   
-  const [currentDomain, setCurrentDomain] = useState<Partial<QuizCategory> | undefined>(
-    CATEGORIES.find(c => c.id === domainId)
+  const [activeDomain, setActiveDomain] = useState<Partial<QuizCategory> | undefined>(() => 
+    CATEGORIES.find(c => c.id === domainId) || (domainId === 'custom' ? { id: 'custom', name: 'Custom Synthesis' } : undefined)
   );
-  const level = currentDomain?.levels?.find(l => l.id === levelId);
+  const level = activeDomain?.levels?.find(l => l.id === levelId);
   
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -42,14 +42,33 @@ export function Quiz() {
   const [displayedXP, setDisplayedXP] = useState(0);
 
   useEffect(() => {
+    // Reset state and update domain when navigation happens
+    const nextDomain = CATEGORIES.find(c => c.id === domainId) || (domainId === 'custom' ? { id: 'custom', name: 'Custom Synthesis' } : undefined);
+    
+    setCurrentIdx(0);
+    setScore(0);
+    setSelectedAnswer(null);
+    setIsLocked(false);
+    setTimeLeft(30);
+    setIsFinished(false);
+    setGameStarted(false);
+    setHistory([]);
+    setAiLoading(true);
+    setAiError(null);
+    setActiveDomain(nextDomain);
+  }, [domainId, levelId]);
+
+  useEffect(() => {
     async function initQuiz() {
-      if (domainId === 'custom' && levelId) {
+      if (!domainId || !levelId) return;
+
+      if (domainId === 'custom') {
         setAiLoading(true);
         try {
           // If questions passed via state, use them
           if (locationState?.questions) {
             setQuestions(locationState.questions);
-            setCurrentDomain({
+            setActiveDomain({
               id: 'custom',
               name: locationState.name || 'Custom Synthesis',
               difficulty: 'Medium',
@@ -61,7 +80,7 @@ export function Quiz() {
             if (quizDoc.exists()) {
               const data = quizDoc.data();
               setQuestions(data.questions);
-              setCurrentDomain({
+              setActiveDomain({
                 id: 'custom',
                 name: data.topic || 'Custom Synthesis',
                 difficulty: data.difficulty || 'Medium',
@@ -80,25 +99,30 @@ export function Quiz() {
         return;
       }
 
-      if (!currentDomain || !level) return;
+      if (!activeDomain || !level) {
+        if (!activeDomain) setAiError('Domain not found');
+        else if (!level) setAiError('Level not found');
+        setAiLoading(false);
+        return;
+      }
 
       // Security: Check progression locks
-      if (currentDomain.id !== 'custom') {
-        if (!isDomainUnlocked(currentDomain.id!)) {
+      if (activeDomain.id !== 'custom') {
+        if (!isDomainUnlocked(activeDomain.id!)) {
           setAiError(`Domain Locked: Complete previous domains first.`);
           setAiLoading(false);
           return;
         }
 
-        if (!level || !isLevelUnlocked(currentDomain.id!, level.id)) {
+        if (!level || !isLevelUnlocked(activeDomain.id!, level.id)) {
           setAiError(`Level Locked: Complete previous levels first.`);
           setAiLoading(false);
           return;
         }
 
         // Security: Check level before starting
-        if (userData && (userData.level || 1) < (currentDomain.requiredLevel || 0)) {
-          setAiError(`Insufficient Level: This domain requires Level ${currentDomain.requiredLevel}`);
+        if (userData && (userData.level || 1) < (activeDomain.requiredLevel || 0)) {
+          setAiError(`Insufficient Level: This domain requires Level ${activeDomain.requiredLevel}`);
           setAiLoading(false);
           return;
         }
@@ -108,7 +132,7 @@ export function Quiz() {
       setAiError(null);
       
       try {
-        const aiQuestions = await generateQuizQuestions(`${currentDomain.name} - Level ${level?.levelNumber || 1}`, currentDomain.difficulty || 'Medium');
+        const aiQuestions = await generateQuizQuestions(`${activeDomain.name} - Level ${level?.levelNumber || 1}`, activeDomain.difficulty || 'Medium');
         setQuestions(aiQuestions);
       } catch (err) {
         console.error("AI Generation failed, falling back to static data:", err);
@@ -125,11 +149,11 @@ export function Quiz() {
     }
 
     initQuiz();
-  }, [domainId, levelId]);
+  }, [domainId, levelId, level]);
 
     const percentage = questions.length > 0 ? (score / questions.length) * 100 : 0;
     const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
-    const earnedXP = currentDomain ? Math.round((xpGains[currentDomain.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1))) + (percentage === 100 ? 50 : 0) : 0;
+    const earnedXP = activeDomain ? Math.round((xpGains[activeDomain.difficulty as keyof typeof xpGains] || 10) * (percentage / 100) * (1 + (Math.min(userData?.streak || 0, 10) * 0.1))) + (percentage === 100 ? 50 : 0) : 0;
 
     // Effect for XP count-up has been moved to top level
     useEffect(() => {
@@ -209,15 +233,15 @@ export function Quiz() {
     setIsFinished(true);
     
     // Progression Logic: Save level progress if score >= 60%
-    if (currentDomain && level && percentage >= 60 && currentDomain.id !== 'custom') {
-      completeLevel(currentDomain.id!, level.id, score);
+    if (activeDomain && level && percentage >= 60 && activeDomain.id !== 'custom') {
+      completeLevel(activeDomain.id!, level.id, score);
     }
 
-    if (user && currentDomain) {
+    if (user && activeDomain) {
       const quizResult = {
         userId: user.uid,
-        category: currentDomain.name,
-        level: level?.levelNumber || (currentDomain.id === 'custom' ? 'AI' : 1),
+        category: activeDomain.name,
+        level: level?.levelNumber || (activeDomain.id === 'custom' ? 'AI' : 1),
         score,
         total: questions.length,
         timestamp: new Date().toISOString()
@@ -236,7 +260,7 @@ export function Quiz() {
 
       // XP Calculation
       const xpGains = { 'Easy': 10, 'Medium': 20, 'Hard': 30 };
-      const baseXP = xpGains[currentDomain.difficulty as keyof typeof xpGains] || 10;
+      const baseXP = xpGains[activeDomain.difficulty as keyof typeof xpGains] || 10;
       
       // Streak Logic & XP Multiplier
       const isPerfect = percentage === 100;
@@ -268,8 +292,8 @@ export function Quiz() {
         lastScore: `${score}/${questions.length}`,
         lastActivity: new Date().toISOString(),
         lastQuizzes: arrayUnion({
-          category: currentDomain.name,
-          level: level?.levelNumber || (currentDomain.id === 'custom' ? 'AI' : 1),
+          category: activeDomain.name,
+          level: level?.levelNumber || (activeDomain.id === 'custom' ? 'AI' : 1),
           score,
           total: questions.length,
           date: new Date().toISOString(),
@@ -280,7 +304,7 @@ export function Quiz() {
     }
   };
 
-  if (!currentDomain) return <div>Domain not found</div>;
+  if (!activeDomain) return <div>Domain not found</div>;
 
   if (aiLoading) {
     return (
@@ -313,7 +337,7 @@ export function Quiz() {
           <div className="stat-label-dim tracking-[6px] text-primary">Neural Pathfinding</div>
           <h2 className="text-4xl font-black tracking-tighter uppercase italic">Synthesizing Domain</h2>
           <p className="text-text-dim text-sm leading-relaxed font-medium">
-            Architecting {currentDomain.name} protocols specifically for your session rank of {getRank(userData?.level || 1)}.
+            Architecting {activeDomain.name} protocols specifically for your session rank of {getRank(userData?.level || 1)}.
           </p>
         </div>
 
@@ -334,7 +358,7 @@ export function Quiz() {
     );
   }
 
-  if (questions.length === 0) return (
+  if (!Array.isArray(questions) || questions.length === 0) return (
     <div className="flex items-center justify-center min-h-[70vh]">
       <div className="text-center p-16 glass-effect rounded-[2.5rem] max-w-lg mx-auto mt-12 space-y-8">
         {aiError?.includes('Level') ? (
@@ -374,7 +398,7 @@ export function Quiz() {
       try {
         const dataUrl = await toPng(cardRef.current, { cacheBust: true, backgroundColor: '#05070A' });
         const link = document.createElement('a');
-        link.download = `result-${currentDomain.id}-${level?.levelNumber || 'custom'}.png`;
+        link.download = `result-${activeDomain.id}-${level?.levelNumber || 'custom'}.png`;
         link.href = dataUrl;
         link.click();
       } catch (err) {
@@ -383,7 +407,7 @@ export function Quiz() {
     };
 
     const handleShare = async () => {
-      const shareText = `I just reached ${getRank(userData?.level || 1)} status on QuizMaster Pro with a score of ${score}/${questions.length} in ${currentDomain.name}. Join the cognitive elite!`;
+      const shareText = `I just reached ${getRank(userData?.level || 1)} status on QuizMaster Pro with a score of ${score}/${questions.length} in ${activeDomain.name}. Join the cognitive elite!`;
       if (navigator.share) {
         try {
           await navigator.share({
@@ -401,6 +425,35 @@ export function Quiz() {
     };
 
     const isLevelPassed = percentage >= 60;
+
+    const getNextPath = () => {
+      if (!activeDomain || activeDomain.id === 'custom') return { path: null, type: null, name: null };
+
+      const currentLevelIdx = activeDomain.levels?.findIndex(l => l.id === levelId) ?? -1;
+      if (currentLevelIdx !== -1 && currentLevelIdx + 1 < (activeDomain.levels?.length ?? 0)) {
+        // Next level in same domain
+        return { 
+          path: `/quiz/${activeDomain.id}/${activeDomain.levels![currentLevelIdx + 1].id}`,
+          type: 'level',
+          name: `Level ${activeDomain.levels![currentLevelIdx + 1].levelNumber}`
+        };
+      }
+
+      // Next domain
+      const currentDomainIdx = CATEGORIES.findIndex(c => c.id === domainId);
+      if (currentDomainIdx !== -1 && currentDomainIdx + 1 < CATEGORIES.length) {
+        const nextDomain = CATEGORIES[currentDomainIdx + 1];
+        return { 
+          path: `/quiz/${nextDomain.id}/levels`,
+          type: 'domain',
+          name: nextDomain.name
+        };
+      }
+
+      return { path: null, type: null, name: null };
+    };
+
+    const nextInfo = getNextPath();
 
     return (
       <div className="flex items-center justify-center min-h-[80vh] py-12 px-4 relative overflow-hidden">
@@ -466,7 +519,7 @@ export function Quiz() {
                   </div>
                   <div className="text-right">
                     <div className="stat-label-dim mb-2">Sequence</div>
-                    <div className="text-xl font-bold tracking-tight uppercase">{currentDomain.name} • NODE {level?.levelNumber || 'AI'}</div>
+                    <div className="text-xl font-bold tracking-tight uppercase">{activeDomain.name} • NODE {level?.levelNumber || 'AI'}</div>
                   </div>
                </div>
 
@@ -503,15 +556,31 @@ export function Quiz() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 px-4">
-            <button 
-              onClick={() => window.location.reload()}
-              className="btn-minimal-filled flex-1 py-6 rounded-2xl text-xl"
-            >
-              <Icons.RefreshCw size={24} className="mr-3" /> RE-ENTER SEQUENCE
-            </button>
+            {isLevelPassed && nextInfo.path ? (
+              <button 
+                onClick={() => navigate(nextInfo.path!)}
+                className="btn-minimal-filled flex-1 py-7 rounded-3xl text-2xl font-black italic tracking-tighter flex items-center justify-center group"
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-xs tracking-[4px] font-black opacity-50 mb-1">
+                    {nextInfo.type === 'domain' ? 'NEXT DOMAIN' : 'NEXT SEQUENCE'}
+                  </span>
+                  <div className="flex items-center">
+                    {nextInfo.name} <Icons.ArrowRight size={28} className="ml-3 group-hover:translate-x-2 transition-transform" />
+                  </div>
+                </div>
+              </button>
+            ) : (
+              <button 
+                onClick={() => window.location.reload()}
+                className="btn-minimal-filled flex-1 py-6 rounded-2xl text-xl"
+              >
+                <Icons.RefreshCw size={24} className="mr-3" /> RE-ENTER SEQUENCE
+              </button>
+            )}
             <Link 
-              to={currentDomain.id === 'custom' ? '/ai-lab' : `/quiz/${currentDomain.id}/levels`}
-              className="btn-minimal flex-1 py-6 rounded-2xl text-lg uppercase font-black italic tracking-tighter text-center flex items-center justify-center"
+              to={activeDomain.id === 'custom' ? '/ai-lab' : `/quiz/${activeDomain.id}/levels`}
+              className="btn-minimal flex-1 py-6 rounded-2xl text-lg uppercase font-black italic tracking-tighter text-center flex items-center justify-center opacity-70 hover:opacity-100"
             >
               <Icons.ArrowLeft size={20} className="mr-3" /> LEVEL OVERVIEW
             </Link>
@@ -535,11 +604,10 @@ export function Quiz() {
           <div className="space-y-6">
              <div className="w-24 h-24 bg-primary/5 rounded-[2.5rem] flex items-center justify-center mx-auto border border-white/10 shadow-inner">
                <Icons.Gamepad2 className="text-primary" size={48} strokeWidth={1.5} />
-             </div>
-             <div className="space-y-3">
+                 <div className="space-y-3">
                <h2 className="text-5xl font-black uppercase italic tracking-tighter">Sequence Ready</h2>
                <p className="text-text-dim text-sm px-10 leading-relaxed font-medium">
-                 Preparing <span className="text-white font-bold">{currentDomain.name} {level ? `Phase ${level.levelNumber}` : 'AI Mode'}</span>. 
+                 Preparing <span className="text-white font-bold">{activeDomain.name} {level ? `Phase ${level.levelNumber}` : 'AI Mode'}</span>. 
                  <br />Minimum 60% accuracy required for node advancement.
                </p>
              </div>
@@ -548,12 +616,13 @@ export function Quiz() {
           <div className="grid grid-cols-2 gap-6 pb-2 border-b border-white/5">
             <div className="text-left py-4">
               <div className="stat-label-dim mb-1">Target Domain</div>
-              <div className="font-black text-xl tracking-tighter uppercase italic">{currentDomain.name}</div>
+              <div className="font-black text-xl tracking-tighter uppercase italic">{activeDomain.name}</div>
             </div>
             <div className="text-right py-4">
               <div className="stat-label-dim mb-1">Complexity</div>
-              <div className="font-black text-xl tracking-tighter uppercase italic text-primary">{currentDomain.difficulty}</div>
+              <div className="font-black text-xl tracking-tighter uppercase italic text-primary">{activeDomain.difficulty}</div>
             </div>
+          </div>
           </div>
 
           <div className="space-y-8">
@@ -595,6 +664,19 @@ export function Quiz() {
 
   const currentQ = questions[currentIdx];
 
+  if (!currentQ) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6">
+        <Icons.AlertTriangle className="text-primary" size={64} />
+        <div className="text-center">
+          <h2 className="text-2xl font-black uppercase italic tracking-tighter">Sequence Integrity Compromised</h2>
+          <p className="text-text-dim text-sm mt-2">The neural path for node {currentIdx + 1} is missing.</p>
+        </div>
+        <button onClick={() => navigate('/dashboard')} className="btn-minimal px-8">Return to Base</button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 space-y-12">
       {/* HUD Header */}
@@ -604,7 +686,7 @@ export function Quiz() {
             <Icons.Code className="text-primary" size={32} strokeWidth={1.5} />
           </div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">{currentDomain.name} <span className="text-primary">{level ? `L${level.levelNumber}` : 'AI'}</span></h2>
+            <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none">{activeDomain.name} <span className="text-primary">{level ? `L${level.levelNumber}` : 'AI'}</span></h2>
             <div className="flex items-center gap-4">
               <div className="stat-label-dim tracking-[3px]">Node {currentIdx + 1} of {questions.length}</div>
               <div className="w-1 h-1 bg-white/20 rounded-full"></div>

@@ -25,7 +25,24 @@ export function Auth() {
     try {
       if (mode === 'login') {
         try {
-          await signInWithEmailAndPassword(auth, email, password);
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          
+          // Notify admin of login
+          try {
+            fetch('/api/notify-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                username: userCredential.user.displayName, 
+                email: userCredential.user.email, 
+                action: 'login',
+                timestamp: new Date().toISOString() 
+              })
+            }).catch(e => console.error('Silent fail on notification:', e));
+          } catch (e) {
+            // Silently ignore notification errors to not block user access
+          }
+
           navigate('/dashboard');
         } catch (err: any) {
           if (err.code === 'auth/user-not-found') {
@@ -55,7 +72,12 @@ export function Auth() {
           await fetch('/api/notify-admin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, registrationDate })
+            body: JSON.stringify({ 
+              username, 
+              email, 
+              action: 'register',
+              timestamp: registrationDate 
+            })
           });
         } catch (err) {
           console.error('Failed to notify admin', err);

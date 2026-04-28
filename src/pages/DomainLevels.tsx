@@ -160,6 +160,64 @@ export function DomainLevels() {
           <button onClick={() => navigate('/dashboard')} className="btn-minimal-filled px-12 py-5 text-xl">PROCEED TO NEXT PROTOCOL</button>
         </motion.div>
       )}
+
+      {/* Domain Navigation Footer */}
+      <footer className="pt-12 mt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 pb-12">
+        <div className="text-center md:text-left">
+          <div className="text-[10px] font-black uppercase tracking-[4px] text-text-dim mb-4">Jump Access Protocols</div>
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+            {CATEGORIES.map((cat, i) => {
+              const isActive = cat.id === domainId;
+              const isLocked = !isDomainUnlocked(cat.id);
+              
+              return (
+                <Link
+                  key={cat.id}
+                  to={isLocked ? '#' : `/quiz/${cat.id}/levels`}
+                  className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center font-black italic text-sm transition-all duration-300 border-2",
+                    isActive 
+                      ? "bg-primary border-primary text-black scale-110 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]" 
+                      : (isLocked ? "bg-white/5 border-white/10 text-white/10 cursor-not-allowed" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:border-white/20 hover:text-white")
+                  )}
+                  title={cat.name}
+                  onClick={(e) => isLocked && e.preventDefault()}
+                >
+                  P{i + 1}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {(() => {
+            const currentIdx = CATEGORIES.findIndex(d => d.id === domainId);
+            const nextDomain = CATEGORIES[currentIdx + 1];
+            
+            if (nextDomain) {
+              const nextLocked = !isDomainUnlocked(nextDomain.id);
+              return (
+                <button
+                  disabled={nextLocked}
+                  onClick={() => navigate(`/quiz/${nextDomain.id}/levels`)}
+                  className={cn(
+                    "btn-minimal py-5 px-8 rounded-2xl flex items-center gap-4 group",
+                    nextLocked && "opacity-20 cursor-not-allowed"
+                  )}
+                >
+                  <div className="text-left">
+                    <div className="text-[9px] font-black tracking-[4px] uppercase opacity-50">Next Protocol Phase</div>
+                    <div className="text-lg font-black uppercase italic tracking-tighter">{nextDomain.name}</div>
+                  </div>
+                  <Icons.ChevronRight className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      </footer>
     </div>
   );
 }
