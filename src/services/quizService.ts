@@ -102,6 +102,6 @@ export async function getLeaderboard() {
     orderBy: {
       xp: 'desc'
     },
-    limit: 10
+    take: 10
   });
 }

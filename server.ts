@@ -69,6 +69,7 @@ async function startServer() {
     }
   });
 
+  // --- Email Logic ---
   // Email Configuration from .env
   const mailConfig = {
     host: process.env.EMAIL_HOST,

@@ -6,11 +6,16 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (process.env.GEMINI_API_KEY || "").trim();
     
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in your environment variables.");
+      throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in your environment variables via the Settings (Secrets) menu.");
     }
+
+    if (apiKey === "AI_STUDIO_API_KEY" || apiKey === "MY_GEMINI_API_KEY" || apiKey.includes("your-api-key")) {
+      throw new Error(`GEMINI_API_KEY is set to a placeholder value ("${apiKey}"). Please go to the Settings (Secrets) menu and provide a valid API key from Google AI Studio.`);
+    }
+
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -118,7 +123,10 @@ export async function analyzeDecision(dilemma: string, context?: string): Promis
     if (!text) throw new Error("No data received from Advisor");
     
     return JSON.parse(text);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("API key not valid") || error?.message?.includes("INVALID_ARGUMENT")) {
+      throw new Error("The Gemini API key is invalid. Please go to the Settings (Secrets) menu and provide a valid key from Google AI Studio.");
+    }
     console.error("Advisor Analysis Error:", error);
     throw error;
   }

@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Home } from './pages/Home';
-import { DecisionSimulator } from './pages/DecisionSimulator';
 import { Dashboard } from './pages/Dashboard';
 import { Quiz } from './pages/Quiz';
 import { DomainLevels } from './pages/DomainLevels';
@@ -12,7 +11,7 @@ import { Contact } from './pages/Contact';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import * as Icons from 'lucide-react';
-import { LogOut, User as UserIcon, Trophy, LayoutDashboard, Home as HomeIcon, Settings, Medal, MessageSquare, Menu, X, BrainCircuit } from 'lucide-react';
+import { LogOut, User as UserIcon, Trophy, LayoutDashboard, Home as HomeIcon, Settings, Medal, MessageSquare, Menu, X } from 'lucide-react';
 import { auth } from './lib/firebase';
 import { signOut } from 'firebase/auth';
 import { getRank } from './lib/utils';
@@ -70,9 +69,6 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           <Link to="/leaderboard" className={`side-nav-item ${location === '/leaderboard' ? 'active' : ''}`}>
             <Trophy size={18} /> Global Standings
-          </Link>
-          <Link to="/simulator" className={`side-nav-item ${location === '/simulator' ? 'active' : ''}`}>
-            <BrainCircuit size={18} /> Decision Advisor
           </Link>
           <Link to="/contact" className={`side-nav-item ${location === '/contact' ? 'active' : ''}`}>
             <MessageSquare size={18} /> Support Net
@@ -164,9 +160,6 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <Link to="/leaderboard" onClick={closeMenu} className={`side-nav-item text-xl py-6 ${location === '/leaderboard' ? 'active' : ''}`}>
                   <Trophy size={24} /> Leaderboard
                 </Link>
-                <Link to="/simulator" onClick={closeMenu} className={`side-nav-item text-xl py-6 ${location === '/simulator' ? 'active' : ''}`}>
-                  <BrainCircuit size={24} /> Decision Advisor
-                </Link>
                 <Link to="/contact" onClick={closeMenu} className={`side-nav-item text-xl py-6 ${location === '/contact' ? 'active' : ''}`}>
                   <MessageSquare size={24} /> Support
                 </Link>
@@ -230,7 +223,6 @@ function AppRoutes() {
       <Layout>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/simulator" element={<DecisionSimulator />} />
           <Route path="/auth" element={!user ? <Auth /> : <Navigate to="/dashboard" />} />
           <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/auth" />} />
           <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />

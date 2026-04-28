@@ -175,6 +175,14 @@ export const CATEGORIES: QuizCategory[] = [
           { id: 's1', text: 'What is the chemical symbol for water?', options: ['CO2', 'O2', 'H2O', 'NaCl'], correctAnswer: 2 },
           { id: 's2', text: 'What is the largest animal in the world?', options: ['African Elephant', 'Blue Whale', 'Colossal Squid', 'Giraffe'], correctAnswer: 1 }
         ]
+      },
+      {
+        id: 'science-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 's3', text: 'Which planet is known as the Red Planet?', options: ['Venus', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 1 },
+          { id: 's4', text: 'What gas do plants absorb from the atmosphere?', options: ['Oxygen', 'Nitrogen', 'Carbon Dioxide', 'Hydrogen'], correctAnswer: 2 }
+        ]
       }
     ]
   },
@@ -191,6 +199,14 @@ export const CATEGORIES: QuizCategory[] = [
         questions: [
           { id: 'sp1', text: 'How many players are there on a standard soccer team?', options: ['9', '10', '11', '12'], correctAnswer: 2 },
           { id: 'sp2', text: 'Which sport is known as the "king of sports"?', options: ['Basketball', 'Tennis', 'Soccer', 'Cricket'], correctAnswer: 2 }
+        ]
+      },
+      {
+        id: 'sports-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'sp3', text: 'In which sport would you use a "shuttlecock"?', options: ['Tennis', 'Badminton', 'Table Tennis', 'Squash'], correctAnswer: 1 },
+          { id: 'sp4', text: 'How many points is a touchdown worth in American football?', options: ['3', '6', '7', '1'], correctAnswer: 1 }
         ]
       }
     ]
@@ -209,6 +225,14 @@ export const CATEGORIES: QuizCategory[] = [
           { id: 'p1', text: 'Which movie features the line "May the Force be with you"?', options: ['Star Trek', 'Star Wars', 'The Matrix', 'Inception'], correctAnswer: 1 },
           { id: 'p2', text: 'Who played Jack in the movie "Titanic"?', options: ['Brad Pitt', 'Leonardo DiCaprio', 'Tom Cruise', 'Johnny Depp'], correctAnswer: 1 }
         ]
+      },
+      {
+        id: 'pop-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'p3', text: 'What is the highest-grossing film of all time (unadjusted)?', options: ['Titanic', 'Avatar', 'Avengers: Endgame', 'Star Wars: The Force Awakens'], correctAnswer: 1 },
+          { id: 'p4', text: 'Which singer is known as the "Queen of Pop"?', options: ['Beyonce', 'Lady Gaga', 'Madonna', 'Whitney Houston'], correctAnswer: 2 }
+        ]
       }
     ]
   },
@@ -225,6 +249,14 @@ export const CATEGORIES: QuizCategory[] = [
         questions: [
           { id: 'l1', text: 'What has a face and two hands but no arms or legs?', options: ['A clock', 'A person', 'A ghost', 'A chair'], correctAnswer: 0 },
           { id: 'l2', text: 'What has keys but can’t open any locks?', options: ['A door', 'A piano', 'A chest', 'A safe'], correctAnswer: 1 }
+        ]
+      },
+      {
+        id: 'logic-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'l3', text: 'What is full of holes but still holds water?', options: ['A net', 'A sieve', 'A sponge', 'A bucket'], correctAnswer: 2 },
+          { id: 'l4', text: 'The more of this there is, the less you see. What is it?', options: ['Light', 'Fog', 'Darkness', 'Mist'], correctAnswer: 2 }
         ]
       }
     ]
@@ -243,6 +275,14 @@ export const CATEGORIES: QuizCategory[] = [
           { id: 'b1', text: 'What do plants need to grow?', options: ['Water and Sun', 'Soda', 'Pizza', 'Sand'], correctAnswer: 0 },
           { id: 'b2', text: 'How many legs does a spider have?', options: ['4', '6', '8', '10'], correctAnswer: 2 }
         ]
+      },
+      {
+        id: 'bio-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'b3', text: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Ribosome', 'Mitochondria', 'Vacuole'], correctAnswer: 2 },
+          { id: 'b4', text: 'Which organ pumps blood throughout the human body?', options: ['Lungs', 'Brain', 'Heart', 'Liver'], correctAnswer: 2 }
+        ]
       }
     ]
   },
@@ -259,6 +299,14 @@ export const CATEGORIES: QuizCategory[] = [
         questions: [
           { id: 'm1', text: 'What is the sum of 15 + 27?', options: ['32', '42', '52', '41'], correctAnswer: 1 },
           { id: 'm2', text: 'What is 8 times 7?', options: ['54', '56', '58', '60'], correctAnswer: 1 }
+        ]
+      },
+      {
+        id: 'math-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'm3', text: 'What is the square root of 64?', options: ['6', '7', '8', '9'], correctAnswer: 2 },
+          { id: 'm4', text: 'If a triangle has angles of 90 and 45 degrees, what is the third angle?', options: ['35', '45', '55', '90'], correctAnswer: 1 }
         ]
       }
     ]
@@ -277,6 +325,14 @@ export const CATEGORIES: QuizCategory[] = [
           { id: 'ph1', text: 'Who said "I think, therefore I am"?', options: ['Socrates', 'Plato', 'Descartes', 'Nietzsche'], correctAnswer: 2 },
           { id: 'ph2', text: 'Which ancient Greek philosopher was a student of Socrates?', options: ['Aristotle', 'Plato', 'Homer', 'Epicurus'], correctAnswer: 1 }
         ]
+      },
+      {
+        id: 'phil-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'ph3', text: 'Who is the author of "Beyond Good and Evil"?', options: ['Kant', 'Hegel', 'Nietzsche', 'Marx'], correctAnswer: 2 },
+          { id: 'ph4', text: 'What is the translation of the Greek word "Philosophia"?', options: ['Love of Life', 'Love of Wisdom', 'Seeker of Truth', 'Master of Logic'], correctAnswer: 1 }
+        ]
       }
     ]
   },
@@ -294,6 +350,14 @@ export const CATEGORIES: QuizCategory[] = [
           { id: 're1', text: 'Which book is the central religious text of Islam?', options: ['Bible', 'Torah', 'Quran', 'Vedas'], correctAnswer: 2 },
           { id: 're2', text: 'In which religion is Christmas a major holiday?', options: ['Judaism', 'Buddhism', 'Christianity', 'Hinduism'], correctAnswer: 2 }
         ]
+      },
+      {
+        id: 'rel-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 're3', text: 'Who is considered the founder of Buddhism?', options: ['Confucius', 'Laozi', 'Siddhartha Gautama', 'Ashoka'], correctAnswer: 2 },
+          { id: 're4', text: 'What is the Jewish place of worship called?', options: ['Synagogue', 'Church', 'Mosque', 'Temple'], correctAnswer: 0 }
+        ]
       }
     ]
   },
@@ -310,6 +374,14 @@ export const CATEGORIES: QuizCategory[] = [
         questions: [
           { id: 'bz1', text: 'What does "CEO" stand for?', options: ['Chief Executive Officer', 'Chief Energy Officer', 'Central Executive Office', 'Chief Electric Officer'], correctAnswer: 0 },
           { id: 'bz2', text: 'Which company was founded by Bill Gates?', options: ['Apple', 'Microsoft', 'Amazon', 'Facebook'], correctAnswer: 1 }
+        ]
+      },
+      {
+        id: 'biz-l2',
+        levelNumber: 2,
+        questions: [
+          { id: 'bz3', text: 'What is a "monopoly"?', options: ['A large building', 'Total control of a market', 'A type of currency', 'A business partnership'], correctAnswer: 1 },
+          { id: 'bz4', text: 'Which city is known as the world\'s financial center?', options: ['Tokyo', 'London', 'New York City', 'Hong Kong'], correctAnswer: 2 }
         ]
       }
     ]
